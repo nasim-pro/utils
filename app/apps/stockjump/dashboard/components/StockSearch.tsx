@@ -1,5 +1,6 @@
 "use client";
 
+import { Search } from "lucide-react";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -7,8 +8,8 @@ export default function StockSearch() {
     const router = useRouter();
     const [symbol, setSymbol] = useState("");
 
-    function handleSubmit(event: FormEvent<HTMLFormElement>) {
-        event.preventDefault();
+    function handleSubmit(e: FormEvent<HTMLFormElement>) {
+        e.preventDefault();
 
         const value = symbol.trim().toLowerCase();
 
@@ -18,49 +19,45 @@ export default function StockSearch() {
     }
 
     return (
-        <div className="rounded-3xl bg-gray-900 p-6 text-white shadow-sm sm:p-8">
-            <div className="max-w-2xl">
-                <div className="mb-3 inline-flex items-center rounded-full border border-white/10 bg-white/10 px-3 py-1 text-xs font-medium text-gray-300">
-                    Stock Research
-                </div>
+        <section className="mb-10">
+            <form onSubmit={handleSubmit}>
+                <div className="relative">
+                    <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-zinc-400" />
 
-                <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
-                    Research a company
-                </h2>
-
-                <p className="mt-2 text-sm leading-6 text-gray-400 sm:text-base">
-                    Search an NSE-listed company to explore its financial
-                    data and quarterly results.
-                </p>
-
-                <form
-                    onSubmit={handleSubmit}
-                    className="mt-6 flex flex-col gap-3 sm:flex-row"
-                >
-                    <div className="relative flex-1">
-                        <input
-                            type="text"
-                            value={symbol}
-                            onChange={(event) =>
-                                setSymbol(event.target.value)
-                            }
-                            placeholder="Enter stock symbol, e.g. TCS"
-                            className="h-12 w-full rounded-xl border border-white/10 bg-white px-4 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-white"
-                        />
-                    </div>
+                    <input
+                        value={symbol}
+                        onChange={(e) => setSymbol(e.target.value)}
+                        placeholder="Search company or NSE symbol..."
+                        className="h-14 w-full rounded-2xl border border-zinc-200 bg-white pl-12 pr-24 text-sm text-zinc-900 shadow-sm outline-none transition placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-4 focus:ring-zinc-100"
+                    />
 
                     <button
                         type="submit"
-                        className="h-12 rounded-xl bg-white px-6 text-sm font-semibold text-gray-900 transition hover:bg-gray-100"
+                        className="absolute right-2 top-2 h-10 rounded-xl bg-zinc-950 px-5 text-sm font-medium text-white transition hover:bg-zinc-800"
                     >
                         Search
                     </button>
-                </form>
+                </div>
+            </form>
 
-                <p className="mt-3 text-xs text-gray-500">
-                    Try TCS, INFY, RELIANCE, HDFCBANK
-                </p>
+            <div className="mt-3 flex flex-wrap gap-2 text-xs text-zinc-500">
+                <span>Try:</span>
+
+                {["TCS", "INFY", "RELIANCE", "TICL"].map((symbol) => (
+                    <button
+                        key={symbol}
+                        type="button"
+                        onClick={() => {
+                            router.push(
+                                `/apps/stockjump/dashboard/${symbol.toLowerCase()}`
+                            );
+                        }}
+                        className="rounded-md bg-zinc-100 px-2 py-1 font-medium text-zinc-600 hover:bg-zinc-200"
+                    >
+                        {symbol}
+                    </button>
+                ))}
             </div>
-        </div>
+        </section>
     );
 }
