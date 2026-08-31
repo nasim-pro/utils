@@ -1,8 +1,62 @@
+"use client";
 
 import Link from "next/link";
+import { FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
 import { appConfig } from "./config";
 
 export default function StockJumpHomePage() {
+    const router = useRouter();
+
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState("");
+
+    async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+        setLoading(true);
+        setError("");
+
+        try {
+            const url = `${appConfig.api.baseUrl.trim()}/api/auth/login`;
+
+            const response = await fetch(url, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    email: email.trim(),
+                    password,
+                }),
+            });
+
+            let data: any;
+            try {
+                data = await response.json();
+            } catch {
+                throw new Error("Invalid response from server");
+            }
+
+            if (!response.ok || !data.success) {
+                throw new Error(data.message || "Invalid email or password");
+            }
+
+            localStorage.setItem("stockjump_token", data.token);
+            router.push(appConfig.links.dashboard);
+        } catch (err) {
+            setError(
+                err instanceof Error
+                    ? err.message
+                    : "Unable to login. Please try again."
+            );
+        } finally {
+            setLoading(false);
+        }
+    }
+
     return (
         <div className="bg-[#07111f] text-white">
             {/* Hero */}
@@ -27,13 +81,6 @@ export default function StockJumpHomePage() {
 
                         <div className="flex items-center gap-4">
                             <Link
-                                href={appConfig.links.login}
-                                className="hidden sm:inline-flex rounded-xl px-5 py-2.5 text-sm font-medium text-gray-300 hover:text-white transition"
-                            >
-                                Log in
-                            </Link>
-
-                            <Link
                                 href={appConfig.links.signup}
                                 className="rounded-xl bg-[#4ade80] px-5 py-2.5 text-sm font-bold text-[#07111f] hover:bg-[#86efac] transition"
                             >
@@ -42,7 +89,7 @@ export default function StockJumpHomePage() {
                         </div>
                     </div>
 
-                    <div className="grid lg:grid-cols-2 gap-16 lg:gap-20 items-center pt-24 lg:pt-28">
+                    <div className="grid lg:grid-cols-2 gap-16 lg:gap-20 items-center pt-16 lg:pt-20">
                         {/* Left */}
                         <div>
                             <div className="inline-flex items-center rounded-full border border-[#27613d] bg-[#10291c] px-4 py-2 text-sm font-semibold text-[#4ade80]">
@@ -66,94 +113,107 @@ export default function StockJumpHomePage() {
                                 of pages.
                             </p>
 
-                            <div className="mt-9 flex flex-wrap gap-4">
-                                <Link
-                                    href={appConfig.links.signup}
-                                    className="inline-flex items-center justify-center rounded-xl bg-[#4ade80] px-7 py-4 font-bold text-[#07111f] hover:bg-[#86efac] transition"
-                                >
-                                    Start Researching Free
-                                    <span className="ml-2">→</span>
-                                </Link>
-
-                                <Link
-                                    href={appConfig.links.login}
-                                    className="inline-flex items-center justify-center rounded-xl border border-[#334155] bg-[#0d1728] px-7 py-4 font-semibold text-white hover:border-[#4ade80] transition"
-                                >
-                                    Log in
-                                </Link>
-                            </div>
-
-                            <div className="mt-7 flex flex-wrap gap-x-6 gap-y-2 text-sm text-[#94a3b8]">
+                            <div className="mt-9 flex flex-wrap gap-x-6 gap-y-2 text-sm text-[#94a3b8]">
                                 <span>✓ NSE earnings data</span>
                                 <span>✓ AI-powered analysis</span>
                                 <span>✓ Historical comparison</span>
                             </div>
                         </div>
 
-                        {/* AI Summary Card */}
+                        {/* Right: Embedded Login Form Card */}
                         <div className="relative">
                             <div className="absolute -inset-4 rounded-[32px] bg-[#4ade80]/5 blur-2xl" />
 
-                            <div className="relative rounded-[28px] border border-[#223147] bg-[#101c2d] p-6 md:p-8 shadow-2xl">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <p className="text-xs uppercase tracking-wider text-[#64748b]">
-                                            Earnings Alert
-                                        </p>
-
-                                        <h2 className="mt-1 text-xl font-bold">
-                                            TCS
-                                        </h2>
-                                    </div>
-
-                                    <span className="rounded-full border border-[#27613d] bg-[#163524] px-3 py-1.5 text-xs font-semibold text-[#4ade80]">
-                                        Results Released
-                                    </span>
-                                </div>
-
-                                <div className="mt-7 space-y-1">
-                                    <Stat
-                                        label="Revenue"
-                                        value="▲ 18.0%"
-                                    />
-
-                                    <Stat
-                                        label="Net Profit"
-                                        value="▲ 26.0%"
-                                    />
-
-                                    <Stat
-                                        label="EPS"
-                                        value="Beat Estimates"
-                                    />
-
-                                    <Stat
-                                        label="Operating Margin"
-                                        value="▲ 1.8%"
-                                    />
-                                </div>
-
-                                <div className="mt-7 rounded-2xl border border-[#26374d] bg-[#0b1727] p-5">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-lg">✦</span>
-                                        <span className="font-semibold text-[#4ade80]">
-                                            AI Insight
-                                        </span>
-                                    </div>
-
-                                    <p className="mt-3 text-sm leading-7 text-[#cbd5e1]">
-                                        Revenue and profit grew faster than the
-                                        previous quarter. Margin expansion
-                                        indicates improving operational
-                                        efficiency. Overall earnings momentum
-                                        remains positive.
+                            <div className="relative rounded-[28px] border border-[#223147] bg-[#101c2d] p-6 sm:p-8 shadow-2xl text-gray-900">
+                                <div className="text-left">
+                                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                                        Welcome back
+                                    </p>
+                                    <h2 className="mt-1 text-2xl font-bold tracking-tight text-white">
+                                        Log in to StockJump
+                                    </h2>
+                                    <p className="mt-1 text-xs text-gray-400">
+                                        Your earnings intelligence dashboard is waiting.
                                     </p>
                                 </div>
 
-                                <div className="mt-6 flex items-center justify-between text-xs text-[#64748b]">
-                                    <span>Quarterly Results</span>
-                                    <span>AI analysis generated</span>
-                                </div>
+                                {error && (
+                                    <div className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-xs text-red-700">
+                                        {error}
+                                    </div>
+                                )}
+
+                                <form
+                                    onSubmit={handleSubmit}
+                                    className="mt-6 space-y-4"
+                                >
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-300 mb-1.5">
+                                            Email address
+                                        </label>
+                                        <input
+                                            type="email"
+                                            required
+                                            autoComplete="email"
+                                            value={email}
+                                            onChange={(event) =>
+                                                setEmail(event.target.value)
+                                            }
+                                            placeholder="you@example.com"
+                                            className="h-11 w-full rounded-xl border border-gray-700 bg-[#07111f] px-4 text-xs text-white outline-none transition focus:border-[#4ade80] focus:ring-2 focus:ring-[#4ade80]/20 placeholder:text-gray-600"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-semibold text-gray-300 mb-1.5">
+                                            Password
+                                        </label>
+                                        <div className="relative">
+                                            <input
+                                                type={
+                                                    showPassword
+                                                        ? "text"
+                                                        : "password"
+                                                }
+                                                required
+                                                autoComplete="current-password"
+                                                value={password}
+                                                onChange={(event) =>
+                                                    setPassword(event.target.value)
+                                                }
+                                                placeholder="Enter your password"
+                                                className="h-11 w-full rounded-xl border border-gray-700 bg-[#07111f] px-4 pr-16 text-xs text-white outline-none transition focus:border-[#4ade80] focus:ring-2 focus:ring-[#4ade80]/20 placeholder:text-gray-600"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    setShowPassword((value) => !value)
+                                                }
+                                                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-[11px] font-semibold text-gray-400 hover:bg-white/5 hover:text-white"
+                                            >
+                                                {showPassword ? "Hide" : "Show"}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        type="submit"
+                                        disabled={loading}
+                                        className="h-11 w-full rounded-xl bg-[#4ade80] px-5 text-xs font-bold text-[#07111f] transition hover:bg-[#86efac] disabled:cursor-not-allowed disabled:opacity-50 mt-2"
+                                    >
+                                        {loading ? "Logging in..." : "Log in"}
+                                    </button>
+                                </form>
+
+                                <p className="mt-6 text-center text-xs text-gray-400">
+                                    Don't have an account?{" "}
+                                    <Link
+                                        href={appConfig.links.signup}
+                                        className="font-semibold text-[#4ade80] hover:underline"
+                                    >
+                                        Create your account
+                                    </Link>
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -328,7 +388,7 @@ export default function StockJumpHomePage() {
 
                             <div className="mt-5 rounded-2xl border border-[#26374d] bg-[#0b1727] p-5">
                                 <div className="flex items-center justify-between">
-                                    <span className="font-semibold">
+                                    <span className="font-semibold text-white">
                                         Quarter-over-Quarter
                                     </span>
 
@@ -344,7 +404,7 @@ export default function StockJumpHomePage() {
                                                 key={index}
                                                 className="flex-1 rounded-t-md bg-[#4ade80]/70"
                                                 style={{
-                                                    height: `${ height }% `,
+                                                    height: `${height}% `,
                                                 }}
                                             />
                                         )
@@ -419,13 +479,6 @@ export default function StockJumpHomePage() {
                         >
                             Create Free Account →
                         </Link>
-
-                        <Link
-                            href={appConfig.links.login}
-                            className="rounded-xl border border-[#075c2c] px-7 py-4 font-bold hover:bg-white/10 transition"
-                        >
-                            Log in
-                        </Link>
                     </div>
                 </div>
             </section>
@@ -458,22 +511,6 @@ export default function StockJumpHomePage() {
                     </div>
                 </div>
             </footer>
-        </div>
-    );
-}
-
-function Stat({
-    label,
-    value,
-}: {
-    label: string;
-    value: string;
-}) {
-    return (
-        <div className="flex items-center justify-between border-b border-[#223147] py-4">
-            <span className="text-[#94a3b8]">{label}</span>
-
-            <span className="font-bold text-[#4ade80]">{value}</span>
         </div>
     );
 }
@@ -593,4 +630,3 @@ function Step({
         </div>
     );
 }
-
