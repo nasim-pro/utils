@@ -1,63 +1,34 @@
 "use client";
 
 import { Search } from "lucide-react";
-import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 
-export default function StockSearch() {
-    const router = useRouter();
-    const [symbol, setSymbol] = useState("");
+interface StockSearchProps {
+    onSearch?: (value: string) => void;
+}
 
-    function handleSubmit(e: FormEvent<HTMLFormElement>) {
-        e.preventDefault();
+export default function StockSearch({ onSearch }: StockSearchProps) {
+    const [value, setValue] = useState("");
 
-        const value = symbol.trim().toLowerCase();
-
-        if (!value) return;
-
-        router.push(`/apps/stockjump/dashboard/${value}`);
+    function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+        onSearch?.(value.trim());
     }
 
     return (
-        <section className="mb-10">
-            <form onSubmit={handleSubmit}>
-                <div className="relative">
-                    <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-zinc-400" />
-
-                    <input
-                        value={symbol}
-                        onChange={(e) => setSymbol(e.target.value)}
-                        placeholder="Search company or NSE symbol..."
-                        className="h-14 w-full rounded-2xl border border-zinc-200 bg-white pl-12 pr-24 text-sm text-zinc-900 shadow-sm outline-none transition placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-4 focus:ring-zinc-100"
-                    />
-
-                    <button
-                        type="submit"
-                        className="absolute right-2 top-2 h-10 rounded-xl bg-zinc-950 px-5 text-sm font-medium text-white transition hover:bg-zinc-800"
-                    >
-                        Search
-                    </button>
-                </div>
-            </form>
-
-            <div className="mt-3 flex flex-wrap gap-2 text-xs text-zinc-500">
-                <span>Try:</span>
-
-                {["TCS", "INFY", "RELIANCE", "TICL"].map((symbol) => (
-                    <button
-                        key={symbol}
-                        type="button"
-                        onClick={() => {
-                            router.push(
-                                `/apps/stockjump/dashboard/${symbol.toLowerCase()}`
-                            );
-                        }}
-                        className="rounded-md bg-zinc-100 px-2 py-1 font-medium text-zinc-600 hover:bg-zinc-200"
-                    >
-                        {symbol}
-                    </button>
-                ))}
+        <form onSubmit={handleSubmit} className="w-full">
+            <div className="relative">
+                <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                <input
+                    value={value}
+                    onChange={(event) => {
+                        setValue(event.target.value);
+                        onSearch?.(event.target.value.trim());
+                    }}
+                    placeholder="Search companies, tickers..."
+                    className="h-11 w-full rounded-xl border border-white/[0.06] bg-[#111b2b] pl-11 pr-4 text-xs text-white outline-none placeholder:text-slate-500 transition focus:border-[#00d084]/50 focus:ring-2 focus:ring-[#00d084]/10"
+                />
             </div>
-        </section>
+        </form>
     );
 }
