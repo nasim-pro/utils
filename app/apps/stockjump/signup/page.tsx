@@ -64,34 +64,47 @@ export default function SignupPage() {
     }
 
     return (
-        <main className="min-h-[calc(100vh-64px)] bg-[#f7f8fa] px-6 py-16">
-            <div className="mx-auto grid w-full max-w-6xl overflow-hidden rounded-[32px] border border-gray-200 bg-white shadow-[0_20px_70px_rgba(0,0,0,0.08)] lg:grid-cols-2">
+        <main className="min-h-screen bg-[#080f1c] px-4 py-6 sm:px-6 sm:py-10">
+            <div className="mx-auto grid w-full max-w-6xl overflow-hidden rounded-2xl border border-white/[0.07] bg-[#0b1422] shadow-[0_25px_80px_rgba(0,0,0,0.35)] lg:grid-cols-2">
 
                 {/* Left side */}
-                <div className="hidden bg-black p-12 text-white lg:flex lg:flex-col lg:justify-between">
-                    <div>
+                <div className="relative hidden overflow-hidden border-r border-white/[0.06] bg-[#070d18] p-10 text-white lg:flex lg:flex-col lg:justify-between xl:p-12">
+
+                    {/* Subtle background glow */}
+                    <div className="pointer-events-none absolute -left-32 -top-32 h-80 w-80 rounded-full bg-[#00d084]/[0.07] blur-3xl" />
+
+                    <div className="relative">
+                        {/* Logo */}
                         <Link
                             href={appConfig.links.home}
-                            className="inline-flex items-center gap-2 text-lg font-bold"
+                            className="inline-flex items-center gap-2.5"
                         >
-                            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-black">
+                            <span className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-[#00d084] text-sm font-bold text-[#06111d]">
                                 S
                             </span>
-                            StockJump
+
+                            <span className="text-lg font-bold tracking-tight">
+                                Stock
+                                <span className="text-[#00d084]">
+                                    Jump
+                                </span>
+                            </span>
                         </Link>
 
-                        <div className="mt-24 max-w-md">
-                            <div className="mb-5 inline-flex rounded-full border border-white/20 px-4 py-2 text-sm text-white/70">
+                        <div className="mt-28 max-w-md">
+                            <div className="mb-5 inline-flex rounded-full border border-[#00d084]/20 bg-[#00d084]/[0.06] px-4 py-2 text-xs font-medium text-[#00d084]">
                                 Built for earnings-driven investors
                             </div>
 
-                            <h2 className="text-4xl font-bold leading-tight">
+                            <h2 className="text-4xl font-bold leading-[1.12] tracking-tight text-white">
                                 Know what happened.
                                 <br />
-                                Know why it matters.
+                                <span className="text-[#00d084]">
+                                    Know why it matters.
+                                </span>
                             </h2>
 
-                            <p className="mt-6 text-base leading-7 text-white/60">
+                            <p className="mt-6 text-sm leading-7 text-slate-400">
                                 Follow the companies you care about and let
                                 StockJump bring important earnings results,
                                 analytics and AI insights directly to you.
@@ -105,11 +118,12 @@ export default function SignupPage() {
                                 ].map((item) => (
                                     <div
                                         key={item}
-                                        className="flex items-center gap-3 text-sm text-white/80"
+                                        className="flex items-center gap-3 text-sm text-slate-300"
                                     >
-                                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/10 text-xs">
+                                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#00d084]/10 text-xs font-bold text-[#00d084]">
                                             ✓
                                         </span>
+
                                         {item}
                                     </div>
                                 ))}
@@ -117,41 +131,49 @@ export default function SignupPage() {
                         </div>
                     </div>
 
-                    <p className="text-sm text-white/40">
+                    <p className="relative text-xs text-slate-600">
                         NSE earnings intelligence, simplified.
                     </p>
                 </div>
 
                 {/* Form */}
-                <div className="p-8 sm:p-12 lg:p-16">
+                <div className="bg-[#0b1422] p-7 sm:p-10 lg:p-14 xl:p-16">
                     <div className="mx-auto max-w-md">
+
+                        {/* Mobile logo */}
                         <Link
                             href={appConfig.links.home}
-                            className="flex items-center gap-2 text-lg font-bold text-gray-900 lg:hidden"
+                            className="flex items-center gap-2.5 lg:hidden"
                         >
-                            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-black text-white">
+                            <span className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-[#00d084] text-sm font-bold text-[#06111d]">
                                 S
                             </span>
-                            StockJump
+
+                            <span className="text-lg font-bold tracking-tight text-white">
+                                Stock
+                                <span className="text-[#00d084]">
+                                    Jump
+                                </span>
+                            </span>
                         </Link>
 
                         <div className="mt-10 lg:mt-0">
-                            <p className="text-sm font-semibold text-gray-500">
+                            <p className="text-xs font-semibold uppercase tracking-wider text-[#00d084]">
                                 Get started
                             </p>
 
-                            <h1 className="mt-2 text-4xl font-bold tracking-tight text-gray-950">
+                            <h1 className="mt-2 text-3xl font-bold tracking-tight text-white sm:text-4xl">
                                 Create your account
                             </h1>
 
-                            <p className="mt-3 text-gray-500">
+                            <p className="mt-3 text-sm leading-6 text-slate-400">
                                 Start tracking the Indian companies that
                                 matter to you.
                             </p>
                         </div>
 
                         {error && (
-                            <div className="mt-8 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                            <div className="mt-8 rounded-xl border border-red-500/20 bg-red-500/[0.08] px-4 py-3 text-sm text-red-400">
                                 {error}
                             </div>
                         )}
@@ -160,8 +182,9 @@ export default function SignupPage() {
                             onSubmit={handleSubmit}
                             className="mt-8 space-y-5"
                         >
+                            {/* Name */}
                             <div>
-                                <label className="text-sm font-semibold text-gray-800">
+                                <label className="text-xs font-semibold text-slate-300">
                                     Name
                                 </label>
 
@@ -174,12 +197,13 @@ export default function SignupPage() {
                                         setName(event.target.value)
                                     }
                                     placeholder="Your name"
-                                    className="mt-2 h-12 w-full rounded-xl border border-gray-300 bg-white px-4 text-sm text-gray-900 outline-none transition focus:border-black focus:ring-4 focus:ring-black/5"
+                                    className="mt-2 h-12 w-full rounded-xl border border-white/[0.08] bg-[#141d2c] px-4 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-[#00d084]/50 focus:ring-4 focus:ring-[#00d084]/[0.08]"
                                 />
                             </div>
 
+                            {/* Email */}
                             <div>
-                                <label className="text-sm font-semibold text-gray-800">
+                                <label className="text-xs font-semibold text-slate-300">
                                     Email address
                                 </label>
 
@@ -192,12 +216,13 @@ export default function SignupPage() {
                                         setEmail(event.target.value)
                                     }
                                     placeholder="you@example.com"
-                                    className="mt-2 h-12 w-full rounded-xl border border-gray-300 bg-white px-4 text-sm text-gray-900 outline-none transition focus:border-black focus:ring-4 focus:ring-black/5"
+                                    className="mt-2 h-12 w-full rounded-xl border border-white/[0.08] bg-[#141d2c] px-4 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-[#00d084]/50 focus:ring-4 focus:ring-[#00d084]/[0.08]"
                                 />
                             </div>
 
+                            {/* Password */}
                             <div>
-                                <label className="text-sm font-semibold text-gray-800">
+                                <label className="text-xs font-semibold text-slate-300">
                                     Password
                                 </label>
 
@@ -216,29 +241,34 @@ export default function SignupPage() {
                                             setPassword(event.target.value)
                                         }
                                         placeholder="At least 8 characters"
-                                        className="h-12 w-full rounded-xl border border-gray-300 bg-white px-4 pr-16 text-sm text-gray-900 outline-none transition focus:border-black focus:ring-4 focus:ring-black/5"
+                                        className="h-12 w-full rounded-xl border border-white/[0.08] bg-[#141d2c] px-4 pr-16 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-[#00d084]/50 focus:ring-4 focus:ring-[#00d084]/[0.08]"
                                     />
 
                                     <button
                                         type="button"
                                         onClick={() =>
-                                            setShowPassword((value) => !value)
+                                            setShowPassword(
+                                                (value) => !value
+                                            )
                                         }
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-xs font-semibold text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-xs font-semibold text-slate-500 transition hover:bg-white/[0.05] hover:text-slate-200"
                                     >
-                                        {showPassword ? "Hide" : "Show"}
+                                        {showPassword
+                                            ? "Hide"
+                                            : "Show"}
                                     </button>
                                 </div>
 
-                                <p className="mt-2 text-xs text-gray-400">
+                                <p className="mt-2 text-xs text-slate-600">
                                     Use at least 8 characters.
                                 </p>
                             </div>
 
+                            {/* Submit */}
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="h-12 w-full rounded-xl bg-black px-5 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="h-12 w-full rounded-xl bg-[#00d084] px-5 text-sm font-semibold text-[#06111d] transition hover:bg-[#00bd78] focus:outline-none focus:ring-4 focus:ring-[#00d084]/20 disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 {loading
                                     ? "Creating account..."
@@ -246,28 +276,28 @@ export default function SignupPage() {
                             </button>
                         </form>
 
-                        <p className="mt-8 text-center text-sm text-gray-500">
+                        <p className="mt-8 text-center text-sm text-slate-500">
                             Already have an account?{" "}
                             <Link
                                 href={appConfig.links.login}
-                                className="font-semibold text-gray-950 hover:underline"
+                                className="font-semibold text-[#00d084] transition hover:text-[#19e39a]"
                             >
                                 Log in
                             </Link>
                         </p>
 
-                        <p className="mt-6 text-center text-xs leading-5 text-gray-400">
+                        <p className="mt-6 text-center text-xs leading-5 text-slate-600">
                             By creating an account, you agree to StockJump's{" "}
                             <Link
                                 href={appConfig.links.terms}
-                                className="underline hover:text-gray-600"
+                                className="underline decoration-slate-700 underline-offset-2 transition hover:text-slate-400"
                             >
                                 Terms
                             </Link>{" "}
                             and{" "}
                             <Link
                                 href={appConfig.links.privacy}
-                                className="underline hover:text-gray-600"
+                                className="underline decoration-slate-700 underline-offset-2 transition hover:text-slate-400"
                             >
                                 Privacy Policy
                             </Link>
@@ -279,4 +309,3 @@ export default function SignupPage() {
         </main>
     );
 }
-
