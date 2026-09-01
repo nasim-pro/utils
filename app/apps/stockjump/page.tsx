@@ -1,62 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
 import { appConfig } from "./config";
+import LoginForm from "./login/page";
 
 export default function StockJumpHomePage() {
-    const router = useRouter();
-
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const [showPassword, setShowPassword] = useState(false);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState("");
-
-    async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-        event.preventDefault();
-        setLoading(true);
-        setError("");
-
-        try {
-            const url = `${appConfig.api.baseUrl.trim()}/api/auth/login`;
-
-            const response = await fetch(url, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    email: email.trim(),
-                    password,
-                }),
-            });
-
-            let data: any;
-            try {
-                data = await response.json();
-            } catch {
-                throw new Error("Invalid response from server");
-            }
-
-            if (!response.ok || !data.success) {
-                throw new Error(data.message || "Invalid email or password");
-            }
-
-            localStorage.setItem("stockjump_token", data.token);
-            router.push(appConfig.links.dashboard);
-        } catch (err) {
-            setError(
-                err instanceof Error
-                    ? err.message
-                    : "Unable to login. Please try again."
-            );
-        } finally {
-            setLoading(false);
-        }
-    }
-
     return (
         <div className="bg-[#07111f] text-white">
             {/* Hero */}
@@ -123,98 +71,7 @@ export default function StockJumpHomePage() {
                         {/* Right: Embedded Login Form Card */}
                         <div className="relative">
                             <div className="absolute -inset-4 rounded-[32px] bg-[#4ade80]/5 blur-2xl" />
-
-                            <div className="relative rounded-[28px] border border-[#223147] bg-[#101c2d] p-6 sm:p-8 shadow-2xl text-gray-900">
-                                <div className="text-left">
-                                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                                        Welcome back
-                                    </p>
-                                    <h2 className="mt-1 text-2xl font-bold tracking-tight text-white">
-                                        Log in to StockJump
-                                    </h2>
-                                    <p className="mt-1 text-xs text-gray-400">
-                                        Your earnings intelligence dashboard is waiting.
-                                    </p>
-                                </div>
-
-                                {error && (
-                                    <div className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-xs text-red-700">
-                                        {error}
-                                    </div>
-                                )}
-
-                                <form
-                                    onSubmit={handleSubmit}
-                                    className="mt-6 space-y-4"
-                                >
-                                    <div>
-                                        <label className="block text-xs font-semibold text-gray-300 mb-1.5">
-                                            Email address
-                                        </label>
-                                        <input
-                                            type="email"
-                                            required
-                                            autoComplete="email"
-                                            value={email}
-                                            onChange={(event) =>
-                                                setEmail(event.target.value)
-                                            }
-                                            placeholder="you@example.com"
-                                            className="h-11 w-full rounded-xl border border-gray-700 bg-[#07111f] px-4 text-xs text-white outline-none transition focus:border-[#4ade80] focus:ring-2 focus:ring-[#4ade80]/20 placeholder:text-gray-600"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-xs font-semibold text-gray-300 mb-1.5">
-                                            Password
-                                        </label>
-                                        <div className="relative">
-                                            <input
-                                                type={
-                                                    showPassword
-                                                        ? "text"
-                                                        : "password"
-                                                }
-                                                required
-                                                autoComplete="current-password"
-                                                value={password}
-                                                onChange={(event) =>
-                                                    setPassword(event.target.value)
-                                                }
-                                                placeholder="Enter your password"
-                                                className="h-11 w-full rounded-xl border border-gray-700 bg-[#07111f] px-4 pr-16 text-xs text-white outline-none transition focus:border-[#4ade80] focus:ring-2 focus:ring-[#4ade80]/20 placeholder:text-gray-600"
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    setShowPassword((value) => !value)
-                                                }
-                                                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-[11px] font-semibold text-gray-400 hover:bg-white/5 hover:text-white"
-                                            >
-                                                {showPassword ? "Hide" : "Show"}
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <button
-                                        type="submit"
-                                        disabled={loading}
-                                        className="h-11 w-full rounded-xl bg-[#4ade80] px-5 text-xs font-bold text-[#07111f] transition hover:bg-[#86efac] disabled:cursor-not-allowed disabled:opacity-50 mt-2"
-                                    >
-                                        {loading ? "Logging in..." : "Log in"}
-                                    </button>
-                                </form>
-
-                                <p className="mt-6 text-center text-xs text-gray-400">
-                                    Don't have an account?{" "}
-                                    <Link
-                                        href={appConfig.links.signup}
-                                        className="font-semibold text-[#4ade80] hover:underline"
-                                    >
-                                        Create your account
-                                    </Link>
-                                </p>
-                            </div>
+                            <LoginForm />
                         </div>
                     </div>
                 </div>
@@ -404,7 +261,7 @@ export default function StockJumpHomePage() {
                                                 key={index}
                                                 className="flex-1 rounded-t-md bg-[#4ade80]/70"
                                                 style={{
-                                                    height: `${height}% `,
+                                                    height: `${height}%`,
                                                 }}
                                             />
                                         )
@@ -528,9 +385,7 @@ function ProblemCard({
         <div className="rounded-[22px] border border-[#223147] bg-[#101c2d] p-6">
             <div className="text-3xl">{icon}</div>
 
-            <h3 className="mt-5 text-lg font-bold">
-                {title}
-            </h3>
+            <h3 className="mt-5 text-lg font-bold">{title}</h3>
 
             <p className="mt-3 text-sm leading-7 text-[#94a3b8]">
                 {description}
@@ -554,13 +409,9 @@ function FeatureCard({
                 {icon}
             </div>
 
-            <h3 className="mt-6 text-xl font-bold">
-                {title}
-            </h3>
+            <h3 className="mt-6 text-xl font-bold">{title}</h3>
 
-            <p className="mt-3 leading-7 text-[#94a3b8]">
-                {description}
-            </p>
+            <p className="mt-3 leading-7 text-[#94a3b8]">{description}</p>
         </div>
     );
 }
@@ -572,9 +423,7 @@ function Question({ text }: { text: string }) {
                 ✓
             </span>
 
-            <span className="text-[#cbd5e1]">
-                {text}
-            </span>
+            <span className="text-[#cbd5e1]">{text}</span>
         </div>
     );
 }
@@ -590,17 +439,11 @@ function MiniMetric({
 }) {
     return (
         <div className="rounded-2xl border border-[#26374d] bg-[#0b1727] p-5">
-            <p className="text-xs text-[#64748b]">
-                {label}
-            </p>
+            <p className="text-xs text-[#64748b]">{label}</p>
 
-            <p className="mt-2 text-xl font-bold">
-                {value}
-            </p>
+            <p className="mt-2 text-xl font-bold">{value}</p>
 
-            <p className="mt-1 text-sm font-semibold text-[#4ade80]">
-                {change}
-            </p>
+            <p className="mt-1 text-sm font-semibold text-[#4ade80]">{change}</p>
         </div>
     );
 }
@@ -616,17 +459,11 @@ function Step({
 }) {
     return (
         <div className="relative rounded-[24px] border border-[#223147] bg-[#101c2d] p-7">
-            <span className="text-sm font-bold text-[#4ade80]">
-                {number}
-            </span>
+            <span className="text-sm font-bold text-[#4ade80]">{number}</span>
 
-            <h3 className="mt-5 text-xl font-bold">
-                {title}
-            </h3>
+            <h3 className="mt-5 text-xl font-bold">{title}</h3>
 
-            <p className="mt-3 leading-7 text-[#94a3b8]">
-                {description}
-            </p>
+            <p className="mt-3 leading-7 text-[#94a3b8]">{description}</p>
         </div>
     );
 }
