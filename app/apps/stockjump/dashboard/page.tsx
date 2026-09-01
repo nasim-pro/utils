@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -24,113 +24,6 @@ import EarningsTable from "./components/EarningsTable";
 import type { Stock } from "./components/types";
 import { appConfig } from "../config";
 
-const stocks: Stock[] = [
-    {
-        symbol: "RELIANCE",
-        companyName: "Reliance Industries",
-        sector: "Energy",
-        revenue: "₹2,58,000 Cr",
-        pat: "₹18,540 Cr",
-        eps: "27.4",
-        patGrowth: 12.8,
-        sentiment: "Beat",
-        rank: 1,
-        score: 94,
-        trendType: "bullish",
-    },
-    {
-        symbol: "HDFCBANK",
-        companyName: "HDFC Bank",
-        sector: "Banking",
-        revenue: "₹1,07,900 Cr",
-        pat: "₹16,820 Cr",
-        eps: "22.1",
-        patGrowth: 7.3,
-        sentiment: "In-Line",
-        rank: 2,
-        score: 91,
-        trendType: "bullish",
-    },
-    {
-        symbol: "TCS",
-        companyName: "Tata Consultancy Svcs",
-        sector: "IT Services",
-        revenue: "₹60,580 Cr",
-        pat: "₹12,105 Cr",
-        eps: "33.2",
-        patGrowth: 9.4,
-        sentiment: "Beat",
-        rank: 3,
-        score: 78,
-        trendType: "neutral",
-    },
-    {
-        symbol: "ICICIBANK",
-        companyName: "ICICI Bank",
-        sector: "Banking",
-        revenue: "₹45,200 Cr",
-        pat: "₹11,270 Cr",
-        eps: "16.9",
-        patGrowth: 14.2,
-        sentiment: "Beat",
-        rank: 4,
-        score: 85,
-        trendType: "bullish",
-    },
-    {
-        symbol: "INFY",
-        companyName: "Infosys",
-        sector: "IT Services",
-        revenue: "₹38,320 Cr",
-        pat: "₹6,840 Cr",
-        eps: "15.8",
-        patGrowth: -3.1,
-        sentiment: "Miss",
-        rank: 5,
-        score: 72,
-        trendType: "bearish",
-    },
-    {
-        symbol: "BHARTIARTL",
-        companyName: "Bharti Airtel",
-        sector: "Telecom",
-        revenue: "₹32,400 Cr",
-        pat: "₹5,320 Cr",
-        eps: "9.4",
-        patGrowth: 11.0,
-        sentiment: "Beat",
-        rank: 6,
-        score: 81,
-        trendType: "bullish",
-    },
-    {
-        symbol: "LT",
-        companyName: "Larsen & Toubro",
-        sector: "Infrastructure",
-        revenue: "₹55,100 Cr",
-        pat: "₹4,110 Cr",
-        eps: "29.8",
-        patGrowth: 8.5,
-        sentiment: "In-Line",
-        rank: 7,
-        score: 58,
-        trendType: "neutral",
-    },
-    {
-        symbol: "TATAMOTORS",
-        companyName: "Tata Motors",
-        sector: "Automobile",
-        revenue: "₹1,05,000 Cr",
-        pat: "₹3,780 Cr",
-        eps: "11.2",
-        patGrowth: -4.5,
-        sentiment: "Miss",
-        rank: 8,
-        score: 49,
-        trendType: "bearish",
-    },
-];
-
 export default function DashboardPage() {
     const router = useRouter();
     const [activeTab, setActiveTab] = useState<DashboardTab>("top");
@@ -138,9 +31,96 @@ export default function DashboardPage() {
     const [query, setQuery] = useState("");
     const [watchlist, setWatchlist] = useState<string[]>(["HDFCBANK"]);
 
+    // State for API data only
+    const [stocks, setStocks] = useState<Stock[]>([]);
+    const [recentStocks, setRecentStocks] = useState<Stock[]>([]);
+    const [loading, setLoading] = useState<boolean>(true);
+    const [loadingRecent, setLoadingRecent] = useState<boolean>(false);
+
     // Top Stocks filters state
     const [sortBy, setSortBy] = useState<"PAT" | "EPS" | "Revenue Growth" | "P/E Ratio" | "ROE">("PAT");
     const [gainersLosers, setGainersLosers] = useState<"gainers" | "losers" | "all">("gainers");
+
+    // Fetch Top/All stocks on initial load
+    useEffect(() => {
+        async function fetchStocks() {
+            setLoading(true);
+            try {
+                const token = localStorage.getItem("stockjump_token");
+                const response = await fetch(`${appConfig.api.baseUrl}/api/stocks`, {
+                    headers: {
+                        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                    },
+                });
+                const result = await response.json();
+                const items = Array.isArray(result) ? result : (result.data || result.stocks || []);
+
+                if (items.length > 0) {
+                    const formatted: Stock[] = items.map((item: any) => ({
+                        symbol: item.symbol || "",
+                        companyName: item.stockName || item.companyName || "",
+                        sector: item.sector || "General",
+                        revenue: item.revenue ? `₹${(item.revenue / 100).toFixed(1)} Cr` : "N/A",
+                        pat: item.netProfit ? `₹${(item.netProfit / 100).toFixed(1)} Cr` : "N/A",
+                        eps: item.eps !== undefined && item.eps !== null ? item.eps.toFixed(2) : "0.00",
+                        patGrowth: item.patGrowth || 0.0,
+                        sentiment: item.sentiment || "In-Line",
+                        trendType: (item.patGrowth || 0) >= 0 ? "bullish" : "bearish",
+                    }));
+                    setStocks(formatted);
+                }
+            } catch (error) {
+                console.error("Failed to fetch stocks:", error);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        fetchStocks();
+    }, []);
+
+    // Fetch API data when "recent" tab is active
+    useEffect(() => {
+        if (activeTab === "recent" && recentStocks.length === 0) {
+            async function fetchRecentEarnings() {
+                setLoadingRecent(true);
+                try {
+                    const token = localStorage.getItem("stockjump_token");
+                    const response = await fetch(`${appConfig.api.baseUrl}/api/recent/quarterly`, {
+                        headers: {
+                            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                        },
+                    });
+                    const result = await response.json();
+                    const items = Array.isArray(result) ? result : (result.data || result.stocks || []);
+
+                    if (items.length > 0) {
+                        const formatted: Stock[] = items.map((item: any) => ({
+                            symbol: item.symbol || "",
+                            companyName: item.stockName || item.companyName || "",
+                            sector: item.sector || "General",
+                            revenue: item.revenue ? `₹${(item.revenue / 100).toFixed(1)} Cr` : "N/A",
+                            pat: item.netProfit ? `₹${(item.netProfit / 100).toFixed(1)} Cr` : "N/A",
+                            eps: item.eps !== undefined && item.eps !== null ? item.eps.toFixed(2) : "0.00",
+                            patGrowth: item.patGrowth || 0.0,
+                            sentiment: item.sentiment || "In-Line",
+                            quarter: item.quarter,
+                            year: item.year,
+                            broadcastDate: item.broadcastDate,
+                            trendType: (item.patGrowth || 0) >= 0 ? "bullish" : "bearish",
+                        }));
+                        setRecentStocks(formatted);
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch recent quarterly earnings:", error);
+                } finally {
+                    setLoadingRecent(false);
+                }
+            }
+
+            fetchRecentEarnings();
+        }
+    }, [activeTab, recentStocks.length]);
 
     function toggleWatchlist(symbol: string) {
         setWatchlist((current) =>
@@ -151,43 +131,44 @@ export default function DashboardPage() {
     }
 
     const filteredStocks = useMemo(() => {
-        let result = [...stocks];
+        let result = activeTab === "recent" ? [...recentStocks] : [...stocks];
 
         if (query) {
             const search = query.toLowerCase();
-            result = result.filter(
-                (stock) =>
-                    stock.symbol.toLowerCase().includes(search) ||
-                    stock.companyName.toLowerCase().includes(search) ||
-                    stock.sector.toLowerCase().includes(search)
-            );
+            result = result.filter((stock) => {
+                const symbol = stock.symbol ?? "";
+                const companyName = stock.companyName ?? "";
+                const sector = stock.sector ?? "";
+
+                return (
+                    symbol.toLowerCase().includes(search) ||
+                    companyName.toLowerCase().includes(search) ||
+                    sector.toLowerCase().includes(search)
+                );
+            });
         }
 
         if (activeTab === "top") {
             if (gainersLosers === "gainers") {
-                result = result.filter(s => s.patGrowth >= 0);
+                result = result.filter((s) => (Number(s.patGrowth ?? 0) >= 0));
             } else if (gainersLosers === "losers") {
-                result = result.filter(s => s.patGrowth < 0);
+                result = result.filter((s) => (Number(s.patGrowth ?? 0) < 0));
             }
 
             result.sort((a, b) => {
-                if (sortBy === "EPS") return parseFloat(b.eps) - parseFloat(a.eps);
-                if (sortBy === "Revenue Growth") return b.patGrowth - a.patGrowth;
-                return b.patGrowth - a.patGrowth; // Default PAT sorting priority
+                const patGrowthA = Number(a.patGrowth ?? 0);
+                const patGrowthB = Number(b.patGrowth ?? 0);
+                const epsA = Number(a.eps ?? 0);
+                const epsB = Number(b.eps ?? 0);
+
+                if (sortBy === "EPS") return epsB - epsA;
+                if (sortBy === "Revenue Growth") return patGrowthB - patGrowthA;
+                return patGrowthB - patGrowthA;
             });
         }
 
         return result;
-    }, [activeTab, query, sortBy, gainersLosers]);
-
-    const watchlistStocks = useMemo(() => {
-        return stocks.filter((s) => watchlist.includes(s.symbol));
-    }, [watchlist]);
-
-    function handleLogout() {
-        localStorage.removeItem("stockjump_token");
-        router.replace(appConfig.links.login);
-    }
+    }, [activeTab, recentStocks, stocks, query, sortBy, gainersLosers]);
 
     return (
         <div className="min-h-screen bg-[#070d18] text-white">
@@ -270,12 +251,22 @@ export default function DashboardPage() {
                             </span>
                         </div>
                         <span className="text-xs text-slate-500">
-                            Updated 2 min ago • Q3 FY25
+                            Updated live
                         </span>
                     </div>
 
                     <div className="mt-4">
-                        <EarningsTable stocks={filteredStocks} isTopStocks={activeTab === "top"} />
+                        {(activeTab === "recent" && loadingRecent) || (activeTab !== "recent" && loading) ? (
+                            <div className="w-full py-12 text-center text-sm font-medium text-slate-500">
+                                Loading data...
+                            </div>
+                        ) : filteredStocks.length === 0 ? (
+                            <div className="w-full py-12 text-center text-sm font-medium text-slate-500">
+                                No data available
+                            </div>
+                        ) : (
+                            <EarningsTable stocks={filteredStocks} isTopStocks={activeTab === "top"} />
+                        )}
                     </div>
                 </div>
 
