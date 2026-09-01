@@ -8,7 +8,7 @@ export const appConfig = {
 
     links: {
         home: "/apps/stockjump",
-        login: "/apps/stockjump/login",
+        login: "/apps/stockjump",
         signup: "/apps/stockjump/signup",
         dashboard: "/apps/stockjump/dashboard",
         privacy: "/apps/stockjump/privacy-policy",
