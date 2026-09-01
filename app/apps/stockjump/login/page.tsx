@@ -1,12 +1,15 @@
-
 "use client";
 
-import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { appConfig } from "../config";
 
-export default function LoginPage() {
+interface LoginFormProps {
+    onSuccess?: () => void;
+}
+
+export default function LoginForm({ onSuccess }: LoginFormProps) {
     const router = useRouter();
 
     const [email, setEmail] = useState("");
@@ -17,7 +20,6 @@ export default function LoginPage() {
 
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
-
         setLoading(true);
         setError("");
 
@@ -36,7 +38,6 @@ export default function LoginPage() {
             });
 
             let data: any;
-
             try {
                 data = await response.json();
             } catch {
@@ -44,18 +45,23 @@ export default function LoginPage() {
             }
 
             if (!response.ok || !data.success) {
-                throw new Error(
-                    data.message || "Invalid email or password"
-                );
+                throw new Error(data.message || "Invalid email or password");
             }
 
-            localStorage.setItem("stockjump_token", data.token);
+            const token = data.data?.token || data.token;
+            if (token) {
+                localStorage.setItem("stockjump_token", token);
+            }
 
-            router.push(appConfig.links.dashboard);
-        } catch (error) {
+            if (onSuccess) {
+                onSuccess();
+            } else {
+                router.push(appConfig.links.dashboard);
+            }
+        } catch (err) {
             setError(
-                error instanceof Error
-                    ? error.message
+                err instanceof Error
+                    ? err.message
                     : "Unable to login. Please try again."
             );
         } finally {
@@ -64,178 +70,83 @@ export default function LoginPage() {
     }
 
     return (
-        <main className="min-h-[calc(100vh-64px)] bg-[#f7f8fa] px-6 py-16">
-            <div className="mx-auto grid w-full max-w-6xl overflow-hidden rounded-[32px] border border-gray-200 bg-white shadow-[0_20px_70px_rgba(0,0,0,0.08)] lg:grid-cols-2">
-
-                {/* Left side */}
-                <div className="hidden bg-black p-12 text-white lg:flex lg:flex-col lg:justify-between">
-                    <div>
-                        <Link
-                            href={appConfig.links.home}
-                            className="inline-flex items-center gap-2 text-lg font-bold"
-                        >
-                            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-black">
-                                S
-                            </span>
-                            StockJump
-                        </Link>
-
-                        <div className="mt-24 max-w-md">
-                            <div className="mb-5 inline-flex rounded-full border border-white/20 px-4 py-2 text-sm text-white/70">
-                                Earnings intelligence for Indian stocks
-                            </div>
-
-                            <h2 className="text-4xl font-bold leading-tight">
-                                Don't just read the results.
-                                <br />
-                                Understand them.
-                            </h2>
-
-                            <p className="mt-6 text-base leading-7 text-white/60">
-                                Track NSE companies, receive earnings
-                                notifications, explore financial analytics,
-                                and use AI-powered insights to understand
-                                what the numbers actually mean.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-4 border-t border-white/10 pt-8">
-                        <div>
-                            <p className="text-2xl font-bold">NSE</p>
-                            <p className="mt-1 text-xs text-white/50">
-                                Companies tracked
-                            </p>
-                        </div>
-
-                        <div>
-                            <p className="text-2xl font-bold">AI</p>
-                            <p className="mt-1 text-xs text-white/50">
-                                Result insights
-                            </p>
-                        </div>
-
-                        <div>
-                            <p className="text-2xl font-bold">24/7</p>
-                            <p className="mt-1 text-xs text-white/50">
-                                Notifications
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Form */}
-                <div className="p-8 sm:p-12 lg:p-16">
-                    <div className="mx-auto max-w-md">
-                        <Link
-                            href={appConfig.links.home}
-                            className="flex items-center gap-2 text-lg font-bold text-gray-900 lg:hidden"
-                        >
-                            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-black text-white">
-                                S
-                            </span>
-                            StockJump
-                        </Link>
-
-                        <div className="mt-10 lg:mt-0">
-                            <p className="text-sm font-semibold text-gray-500">
-                                Welcome back
-                            </p>
-
-                            <h1 className="mt-2 text-4xl font-bold tracking-tight text-gray-950">
-                                Log in to StockJump
-                            </h1>
-
-                            <p className="mt-3 text-gray-500">
-                                Your earnings intelligence dashboard is
-                                waiting.
-                            </p>
-                        </div>
-
-                        {error && (
-                            <div className="mt-8 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                                {error}
-                            </div>
-                        )}
-
-                        <form
-                            onSubmit={handleSubmit}
-                            className="mt-8 space-y-5"
-                        >
-                            <div>
-                                <label className="text-sm font-semibold text-gray-800">
-                                    Email address
-                                </label>
-
-                                <input
-                                    type="email"
-                                    required
-                                    autoComplete="email"
-                                    value={email}
-                                    onChange={(event) =>
-                                        setEmail(event.target.value)
-                                    }
-                                    placeholder="you@example.com"
-                                    className="mt-2 h-12 w-full rounded-xl border border-gray-300 bg-white px-4 text-sm text-gray-900 outline-none transition focus:border-black focus:ring-4 focus:ring-black/5"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="text-sm font-semibold text-gray-800">
-                                    Password
-                                </label>
-
-                                <div className="relative mt-2">
-                                    <input
-                                        type={
-                                            showPassword
-                                                ? "text"
-                                                : "password"
-                                        }
-                                        required
-                                        autoComplete="current-password"
-                                        value={password}
-                                        onChange={(event) =>
-                                            setPassword(event.target.value)
-                                        }
-                                        placeholder="Enter your password"
-                                        className="h-12 w-full rounded-xl border border-gray-300 bg-white px-4 pr-16 text-sm text-gray-900 outline-none transition focus:border-black focus:ring-4 focus:ring-black/5"
-                                    />
-
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            setShowPassword((value) => !value)
-                                        }
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-xs font-semibold text-gray-500 hover:bg-gray-100 hover:text-gray-900"
-                                    >
-                                        {showPassword ? "Hide" : "Show"}
-                                    </button>
-                                </div>
-                            </div>
-
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className="h-12 w-full rounded-xl bg-black px-5 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                                {loading ? "Logging in..." : "Log in"}
-                            </button>
-                        </form>
-
-                        <p className="mt-8 text-center text-sm text-gray-500">
-                            Don't have an account?{" "}
-                            <Link
-                                href={appConfig.links.signup}
-                                className="font-semibold text-gray-950 hover:underline"
-                            >
-                                Create your account
-                            </Link>
-                        </p>
-                    </div>
-                </div>
+        <div className="relative rounded-[28px] border border-[#223147] bg-[#101c2d] p-6 sm:p-8 shadow-2xl text-gray-900">
+            <div className="text-left">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    Welcome back
+                </p>
+                <h2 className="mt-1 text-2xl font-bold tracking-tight text-white">
+                    Log in to StockJump
+                </h2>
+                <p className="mt-1 text-xs text-gray-400">
+                    Your earnings intelligence dashboard is waiting.
+                </p>
             </div>
-        </main>
+
+            {error && (
+                <div className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-xs text-red-700">
+                    {error}
+                </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+                <div>
+                    <label className="block text-xs font-semibold text-gray-300 mb-1.5">
+                        Email address
+                    </label>
+                    <input
+                        type="email"
+                        required
+                        autoComplete="email"
+                        value={email}
+                        onChange={(event) => setEmail(event.target.value)}
+                        placeholder="you@example.com"
+                        className="h-11 w-full rounded-xl border border-gray-700 bg-[#07111f] px-4 text-xs text-white outline-none transition focus:border-[#4ade80] focus:ring-2 focus:ring-[#4ade80]/20 placeholder:text-gray-600"
+                    />
+                </div>
+
+                <div>
+                    <label className="block text-xs font-semibold text-gray-300 mb-1.5">
+                        Password
+                    </label>
+                    <div className="relative">
+                        <input
+                            type={showPassword ? "text" : "password"}
+                            required
+                            autoComplete="current-password"
+                            value={password}
+                            onChange={(event) => setPassword(event.target.value)}
+                            placeholder="Enter your password"
+                            className="h-11 w-full rounded-xl border border-gray-700 bg-[#07111f] px-4 pr-16 text-xs text-white outline-none transition focus:border-[#4ade80] focus:ring-2 focus:ring-[#4ade80]/20 placeholder:text-gray-600"
+                        />
+                        <button
+                            type="button"
+                            onClick={() => setShowPassword((value) => !value)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-[11px] font-semibold text-gray-400 hover:bg-white/5 hover:text-white"
+                        >
+                            {showPassword ? "Hide" : "Show"}
+                        </button>
+                    </div>
+                </div>
+
+                <button
+                    type="submit"
+                    disabled={loading}
+                    className="h-11 w-full rounded-xl bg-[#4ade80] px-5 text-xs font-bold text-[#07111f] transition hover:bg-[#86efac] disabled:cursor-not-allowed disabled:opacity-50 mt-2"
+                >
+                    {loading ? "Logging in..." : "Log in"}
+                </button>
+            </form>
+
+            <p className="mt-6 text-center text-xs text-gray-400">
+                Don't have an account?{" "}
+                <Link
+                    href={appConfig.links.signup}
+                    className="font-semibold text-[#4ade80] hover:underline"
+                >
+                    Create your account
+                </Link>
+            </p>
+        </div>
     );
 }
-
