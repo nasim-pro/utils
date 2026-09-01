@@ -1,28 +1,33 @@
-// export type StockSentiment = "Beat" | "In-Line" | "Miss";
 
-// export interface Stock {
-//     symbol: string;
-//     companyName: string;
-//     sector: string;
-//     revenue: string;
-//     pat: string;
-//     eps: string;
-//     patGrowth: number;
-//     sentiment: StockSentiment;
-// }
-
-export type StockSentiment = "Beat" | "In-Line" | "Miss";
+export type StockSentiment = "Beat" | "Miss" | "In-Line";
 
 export interface Stock {
+    _id?: string;
     symbol: string;
-    companyName: string;
-    sector: string;
-    revenue: string;
-    pat: string;
-    eps: string;
-    patGrowth: number;
-    sentiment: StockSentiment;
-    rank?: number;
-    score?: number;
-    trendType?: "bullish" | "neutral" | "bearish";
+    stockName?: string;
+    companyName?: string;
+
+    year: number;
+    quarter: string;
+
+    broadcastDate?: string;
+
+    revenue?: number;
+    netProfit?: number;
+    operatingProfit?: number;
+    profitBeforeTax?: number;
+
+    currentPrice?: number;
+    marketCap?: number;
+    bookValue?: number;
+    debt?: number;
+    promoterHolding?: number;
+    patGrowth?: number;
+    pat?: string;
+    eps?: string;
+    sector?: string;
+    sentiment?: StockSentiment;
+
+    trendType?: "bullish" | "bearish" | "neutral";
 }
+
