@@ -1,3 +1,4 @@
+import { StringToHashBucketFastAttrs } from "@tensorflow/tfjs";
 
 export type StockSentiment = "Beat" | "Miss" | "In-Line";
 
@@ -12,7 +13,7 @@ export interface Stock {
 
     broadcastDate?: string;
 
-    revenue?: number;
+    revenue?: string;
     netProfit?: number;
     operatingProfit?: number;
     profitBeforeTax?: number;
@@ -29,5 +30,7 @@ export interface Stock {
     sentiment?: StockSentiment;
 
     trendType?: "bullish" | "bearish" | "neutral";
+
+    
 }
 
