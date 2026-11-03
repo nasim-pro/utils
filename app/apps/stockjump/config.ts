@@ -16,7 +16,13 @@ export const appConfig = {
     },
 
     api: {
+        /**
+         * Defaults to the deployed API. Point this at a local/other backend by
+         * setting NEXT_PUBLIC_STOCKJUMP_API_URL (for example
+         * http://localhost:2026) before `npm run dev` / `npm run build`.
+         */
         baseUrl:
+            process.env.NEXT_PUBLIC_STOCKJUMP_API_URL?.trim() ||
             "https://gwjjlwmzsi6jzvalhbssaqhfju0pofzk.lambda-url.ap-south-1.on.aws",
     },
 };

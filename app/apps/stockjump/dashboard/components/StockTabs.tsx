@@ -10,7 +10,7 @@ interface StockTabsProps {
 }
 
 const tabs = [
-    { id: "recent" as const, label: "Recent Earnings (24h)", icon: TrendingUp },
+    { id: "recent" as const, label: "Recent Earnings", icon: TrendingUp },
     { id: "top" as const, label: "Strong Movers", icon: BarChart3 },
     { id: "all" as const, label: "All Stocks", icon: List },
 ];
