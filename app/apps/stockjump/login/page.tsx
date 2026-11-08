@@ -4,6 +4,8 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { appConfig } from "../config";
+import { loginUser } from "../dashboard/lib/api";
+import { storeAuthSession } from "../dashboard/lib/session";
 
 interface LoginFormProps {
     onSuccess?: () => void;
@@ -24,34 +26,12 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
         setError("");
 
         try {
-            const url = `${appConfig.api.baseUrl.trim()}/api/auth/login`;
-
-            const response = await fetch(url, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    email: email.trim(),
-                    password,
-                }),
+            const session = await loginUser({
+                email: email.trim(),
+                password,
             });
 
-            let data: any;
-            try {
-                data = await response.json();
-            } catch {
-                throw new Error("Invalid response from server");
-            }
-
-            if (!response.ok || !data.success) {
-                throw new Error(data.message || "Invalid email or password");
-            }
-
-            const token = data.data?.token || data.token;
-            if (token) {
-                localStorage.setItem("stockjump_token", token);
-            }
+            storeAuthSession(session);
 
             if (onSuccess) {
                 onSuccess();
@@ -139,7 +119,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
             </form>
 
             <p className="mt-6 text-center text-xs text-gray-400">
-                Don't have an account?{" "}
+                Don&apos;t have an account?{" "}
                 <Link
                     href={appConfig.links.signup}
                     className="font-semibold text-[#4ade80] hover:underline"
