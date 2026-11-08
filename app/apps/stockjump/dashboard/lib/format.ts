@@ -137,17 +137,23 @@ export function formatGrowth(value?: number | null): string {
         return "-";
     }
 
-    const rounded = Math.abs(number).toFixed(1);
-
-    if (number > 0) {
-        return `↑ +${rounded}%`;
+    if (number === 0) {
+        return "→ 0.0%";
     }
 
-    if (number < 0) {
-        return `↓ -${rounded}%`;
+    const arrow = number > 0 ? "↑ +" : "↓ -";
+    const absolute = Math.abs(number);
+
+    // Growth can explode when the previous value is close to zero (the API
+    // can return values in the millions of percent). Keep tables readable
+    // instead of printing an unbounded number.
+    if (absolute >= 10_000) {
+        return `${arrow}9,999.9%+`;
     }
 
-    return "→ 0.0%";
+    return `${arrow}${absolute.toLocaleString("en-IN", {
+        maximumFractionDigits: 1,
+    })}%`;
 }
 
 export function growthClass(value?: number | null): string {
