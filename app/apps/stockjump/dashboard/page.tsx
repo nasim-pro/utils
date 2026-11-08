@@ -258,6 +258,8 @@ export default function DashboardPage() {
     const [recentPage, setRecentPage] = useState(1);
     const [allPage, setAllPage] = useState(1);
     const [recentDays, setRecentDays] = useState(7);
+    const [recentFrom, setRecentFrom] = useState("");
+    const [recentTo, setRecentTo] = useState("");
     const [recentBasis, setRecentBasis] =
         useState<BasisParam>("preferred");
     const [financialFilter, setFinancialFilter] =
@@ -316,6 +318,19 @@ export default function DashboardPage() {
         activeTab === "all" ? allPage : recentPage;
     const recentLimit =
         activeTab === "all" ? 50 : 25;
+    const customRangeActive =
+        activeTab === "recent" &&
+        (recentFrom !== "" || recentTo !== "");
+    const recentFromParam = customRangeActive
+        ? recentFrom
+            ? `${recentFrom}T00:00:00.000Z`
+            : undefined
+        : undefined;
+    const recentToParam = customRangeActive
+        ? recentTo
+            ? `${recentTo}T23:59:59.999Z`
+            : undefined
+        : undefined;
 
     useEffect(() => {
         if (
@@ -336,7 +351,11 @@ export default function DashboardPage() {
                     await fetchRecentQuarterly({
                         page: recentPageForTab,
                         limit: recentLimit,
-                        days: recentDaysForTab,
+                        days: customRangeActive
+                            ? undefined
+                            : recentDaysForTab,
+                        from: recentFromParam,
+                        to: recentToParam,
                         consolidated: recentBasis,
                         isFinancial:
                             financialFilter === "all"
@@ -377,6 +396,9 @@ export default function DashboardPage() {
         recentBasis,
         financialFilter,
         recentReload,
+        customRangeActive,
+        recentFromParam,
+        recentToParam,
     ]);
 
     useEffect(() => {
@@ -578,11 +600,15 @@ export default function DashboardPage() {
 
     const title =
         activeTab === "recent"
-            ? `Recent Earnings (${
-                  recentDays === 1
-                      ? "24h"
-                      : `${recentDays}d`
-              })`
+            ? customRangeActive
+                ? `Recent Earnings (${recentFrom || "start"} → ${
+                      recentTo || "now"
+                  })`
+                : `Recent Earnings (${
+                      recentDays === 1
+                          ? "24h"
+                          : `${recentDays}d`
+                  })`
             : activeTab === "top"
                 ? "Strong Movers"
                 : "Latest Stocks (90d)";
@@ -615,13 +641,16 @@ export default function DashboardPage() {
                                         <Pill
                                             key={days}
                                             active={
+                                                !customRangeActive &&
                                                 recentDays ===
-                                                days
+                                                    days
                                             }
                                             onClick={() => {
                                                 setRecentDays(
                                                     days
                                                 );
+                                                setRecentFrom("");
+                                                setRecentTo("");
                                                 setRecentPage(
                                                     1
                                                 );
@@ -632,6 +661,51 @@ export default function DashboardPage() {
                                                 : `${days}d`}
                                         </Pill>
                                     ))}
+                                </div>
+                            )}
+
+                            {activeTab === "recent" && (
+                                <div className="flex items-center gap-2 rounded-xl bg-[#111b2b] px-2.5 py-1.5 text-[11px] font-semibold text-slate-500">
+                                    <span>From</span>
+                                    <input
+                                        type="date"
+                                        value={recentFrom}
+                                        max={recentTo || undefined}
+                                        onChange={(event) => {
+                                            setRecentFrom(
+                                                event.target.value
+                                            );
+                                            setRecentPage(1);
+                                        }}
+                                        className="rounded-lg border border-white/[0.08] bg-[#0b1422] px-2 py-1 text-[11px] text-slate-200 outline-none [color-scheme:dark] focus:border-[#00d084]/50"
+                                    />
+                                    <span>To</span>
+                                    <input
+                                        type="date"
+                                        value={recentTo}
+                                        min={recentFrom || undefined}
+                                        onChange={(event) => {
+                                            setRecentTo(
+                                                event.target.value
+                                            );
+                                            setRecentPage(1);
+                                        }}
+                                        className="rounded-lg border border-white/[0.08] bg-[#0b1422] px-2 py-1 text-[11px] text-slate-200 outline-none [color-scheme:dark] focus:border-[#00d084]/50"
+                                    />
+
+                                    {customRangeActive && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setRecentFrom("");
+                                                setRecentTo("");
+                                                setRecentPage(1);
+                                            }}
+                                            className="rounded-lg px-1.5 py-1 text-[10px] font-bold text-slate-400 transition hover:bg-white/5 hover:text-white"
+                                        >
+                                            Clear
+                                        </button>
+                                    )}
                                 </div>
                             )}
 
