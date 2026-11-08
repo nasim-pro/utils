@@ -1,44 +1,63 @@
-# Image Utility
+# GrowUpNow — Apps & Utilities
 
-**Image Utility** is a web-based application that provides various image processing tools, including capturing, cropping, and compressing images. This tool is designed to help users efficiently handle images without losing quality. Click link to view: https://nasim-pro.github.io/photo-util
+A static Next.js site that hosts small apps and browser utilities under one
+domain.
 
-## Features
+## Pages
 
-### 📷 Capture Image
-- Start the camera and take pictures directly from your browser.
-- Save the captured images in JPEG format.
+| Path | What it is |
+| --- | --- |
+| `/` | Landing page listing every hosted app and utility |
+| `/apps/stockjump` | StockJump — Indian earnings and financial analysis |
+| `/apps/done-log` | DoneLog — completed-task tracker / Chrome extension |
+| `/tools` | Image utilities |
+| `/capture-photo` | Capture a photo from the device camera |
+| `/crop-image` | Crop and download an image |
+| `/lossless-compression` | Compress images without visible quality loss |
+| `/lossy-compression` | Compress images with configurable quality |
+| `/metadata-viewer` | Inspect image EXIF metadata |
 
-### ✂️ Crop Image
-- Upload an image and crop it with a customizable crop box.
-- Supports free cropping with zoom and scale options.
-- Maintains high quality with lossless cropping.
+## Local development
 
-### 📉 Lossless Image Compression
-- Compress images while maintaining the original quality.
-- Uses efficient compression techniques to reduce file size.
+```bash
+npm install
+npm run dev
+```
 
-### 🏗️ Lossy Image Compression
-- Compress images with adjustable quality settings to reduce file size.
-- Converts images to optimized JPEG format for better storage and sharing.
+Open <http://localhost:3000>.
 
-### 📝 Metadata Viewer
-- Extract and display metadata information from images.
-- Useful for checking image properties like dimensions, format, and EXIF data.
+## Testing StockJump against a local API
 
-## Technologies Used
-- **HTML, CSS, JavaScript** – For the frontend and user interface.
-- **Cropper.js** – For advanced cropping features.
-- **Canvas API** – To process images directly in the browser.
-- **UPNG.js** – For lossless PNG compression.
-- **MediaDevices API** – To access the user's camera.
+The base URL lives in
+[`app/apps/stockjump/config.ts`](./app/apps/stockjump/config.ts). It reads:
 
-## Usage
-1. Clone the repository or download the project.
-2. Open `index.html` in a web browser.
-3. Use the navigation menu to access different features.
-4. Upload, capture, crop, or compress images as needed.
-5. Download the processed images to your device.
+```ts
+process.env.NEXT_PUBLIC_STOCKJUMP_API_URL?.trim() ||
+    "https://gwjjlwmzsi6jzvalhbssaqhfju0pofzk.lambda-url.ap-south-1.on.aws"
+```
 
----
+So the deployed site uses the Lambda URL by default. To point local development
+at your local backend, create `.env.local` (it is gitignored) with:
 
-🚀 **Image Utility** is a simple yet powerful tool for handling images efficiently. Feel free to contribute or suggest improvements!
+```bash
+NEXT_PUBLIC_STOCKJUMP_API_URL=http://localhost:2026
+```
+
+Then run:
+
+```bash
+npm run dev
+```
+
+Restart the dev server after changing the env file. You can copy
+[`.env.example`](./.env.example) as a starting point. Nothing changes in the
+build/deploy setup, so pushing still produces a site that uses the Lambda URL.
+
+## Build
+
+```bash
+npm run build
+```
+
+The site uses `output: "export"` and deploys the generated `out/` directory to
+GitHub Pages.
