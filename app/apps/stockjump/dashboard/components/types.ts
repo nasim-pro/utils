@@ -1,36 +1,58 @@
-import { StringToHashBucketFastAttrs } from "@tensorflow/tfjs";
+/**
+ * View models used by the dashboard table components.
+ *
+ * Monetary fields are already normalized to Crores by `lib/api.ts`; the table
+ * never receives raw backend units.
+ */
 
-export type StockSentiment = "Beat" | "Miss" | "In-Line";
+export type StockSentiment =
+    | "Beat"
+    | "Miss"
+    | "In-Line";
+
+export type ReportBasis =
+    | "consolidated"
+    | "standalone";
 
 export interface Stock {
-    _id?: string;
+    id: string;
+
     symbol: string;
-    stockName?: string;
-    companyName?: string;
+    stockName?: string | null;
+    companyName?: string | null;
 
-    year: number;
-    quarter: string;
+    year?: number;
+    quarter?: string;
+    broadcastDate?: string | null;
 
-    broadcastDate?: string;
+    consolidated?: boolean;
+    reportType?: string;
+    isFinancial?: boolean | null;
 
-    revenue?: string;
-    netProfit?: number;
-    operatingProfit?: number;
-    profitBeforeTax?: number;
+    /** Normalized to Crores. */
+    revenue?: number | null;
+    netProfit?: number | null;
+    operatingProfit?: number | null;
+    profitBeforeTax?: number | null;
+    eps?: number | null;
 
-    currentPrice?: number;
-    marketCap?: number;
-    bookValue?: number;
-    debt?: number;
-    promoterHolding?: number;
-    patGrowth?: number;
-    pat?: string;
-    eps?: string;
+    /** Used by the strong-movers view. */
+    currentValue?: number | null;
+    previousValue?: number | null;
+    growth?: number | null;
+    metricLabel?: string;
+    comparisonNote?: string | null;
+
+    currentPrice?: number | null;
+    marketCap?: number | null;
+    pe?: number | null;
+    pb?: number | null;
+    promoterHolding?: number | null;
+
+    /** True when the deployed API did not return normalized units. */
+    legacyUnits?: boolean;
+
     sector?: string;
     sentiment?: StockSentiment;
-
     trendType?: "bullish" | "bearish" | "neutral";
-
-    
 }
-

@@ -16,7 +16,18 @@ export const appConfig = {
     },
 
     api: {
+        /**
+         * Backend used by StockJump.
+         *
+         * Deployed builds use the Lambda URL below. For local testing, create
+         * `.env.local` and set:
+         *
+         *   NEXT_PUBLIC_STOCKJUMP_API_URL=http://localhost:2026
+         *
+         * then restart `npm run dev`.
+         */
         baseUrl:
+            process.env.NEXT_PUBLIC_STOCKJUMP_API_URL?.trim() ||
             "https://gwjjlwmzsi6jzvalhbssaqhfju0pofzk.lambda-url.ap-south-1.on.aws",
     },
 };

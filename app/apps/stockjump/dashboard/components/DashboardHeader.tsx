@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Bell, Rocket } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Bell, LogOut, Rocket } from "lucide-react";
+import { appConfig } from "../../config";
+import { clearAuthSession } from "../lib/session";
 
 interface DashboardHeaderProps {
     onProfileClick?: () => void;
@@ -10,6 +13,14 @@ interface DashboardHeaderProps {
 export default function DashboardHeader({
     onProfileClick,
 }: DashboardHeaderProps) {
+    const router = useRouter();
+
+    function handleLogout() {
+        clearAuthSession();
+        router.push(appConfig.links.login);
+        router.refresh();
+    }
+
     return (
         <header className="h-[58px] border-b border-white/[0.06] bg-[#070d18]">
             <div className="flex h-full items-center justify-between px-5">
@@ -43,8 +54,19 @@ export default function DashboardHeader({
                         onClick={onProfileClick}
                         className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-purple-300 via-purple-400 to-orange-200 text-xs font-bold text-white ring-2 ring-white/10"
                         aria-label="Profile"
+                        title="Profile"
                     >
                         <span>👨🏻</span>
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={handleLogout}
+                        className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-white/5 hover:text-white"
+                        aria-label="Log out"
+                        title="Log out"
+                    >
+                        <LogOut className="h-[17px] w-[17px]" />
                     </button>
                 </div>
             </div>

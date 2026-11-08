@@ -47,9 +47,14 @@
 
 /* Page */
 
+.main-wrapper {
+    padding: 24px 0 48px;
+}
+
 .page-container {
     max-width: 1200px;
     margin: auto;
+    padding: 0 24px;
 }
 
 .page-header {
@@ -123,7 +128,7 @@
 
 @media (max-width: 768px) {
     .main-wrapper {
-        padding: 20px;
+        padding: 20px 0 40px;
     }
 
     .navbar-container {
