@@ -14,6 +14,11 @@ import {
     sortNewestFirst,
     toNumber,
 } from "./format";
+import {
+    getStoredToken,
+    type AuthSession,
+    type AuthUser,
+} from "./session";
 
 export type BasisParam = "preferred" | "all" | "true" | "false";
 
@@ -257,6 +262,103 @@ export class ApiError extends Error {
     }
 }
 
+interface AuthResponse {
+    success: boolean;
+    token?: string;
+    user?: AuthUser;
+    data?: {
+        user?: AuthUser;
+        token?: string;
+    };
+}
+
+export interface HealthResponse {
+    success: boolean;
+    status: "ok" | "error";
+}
+
+/** GET /health – also checks the database connection on the server. */
+export async function fetchHealth(): Promise<HealthResponse> {
+    return apiRequest<HealthResponse>("/health", {
+        timeoutMs: 8_000,
+    });
+}
+
+export interface LoginParams {
+    email: string;
+    password: string;
+}
+
+export interface RegisterParams extends LoginParams {
+    name: string;
+}
+
+function toAuthSession(response: AuthResponse): AuthSession {
+    const user = response.data?.user ?? response.user;
+    const token = response.data?.token ?? response.token;
+
+    if (
+        !user ||
+        !token ||
+        typeof user.id !== "string" ||
+        typeof user.name !== "string" ||
+        typeof user.email !== "string"
+    ) {
+        throw new ApiError(
+            "The API returned an invalid authentication response"
+        );
+    }
+
+    return { user, token };
+}
+
+/** POST /api/auth/login */
+export async function loginUser(
+    params: LoginParams
+): Promise<AuthSession> {
+    const response = await apiRequest<AuthResponse>(
+        "/api/auth/login",
+        {
+            init: {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    email: params.email.trim(),
+                    password: params.password,
+                }),
+            },
+        }
+    );
+
+    return toAuthSession(response);
+}
+
+/** POST /api/auth/register */
+export async function registerUser(
+    params: RegisterParams
+): Promise<AuthSession> {
+    const response = await apiRequest<AuthResponse>(
+        "/api/auth/register",
+        {
+            init: {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    name: params.name.trim(),
+                    email: params.email.trim(),
+                    password: params.password,
+                }),
+            },
+        }
+    );
+
+    return toAuthSession(response);
+}
+
 interface RequestOptions {
     query?: Record<string, unknown>;
     init?: RequestInit;
@@ -312,14 +414,10 @@ async function apiRequest<T>(
     const headers = new Headers(options.init?.headers);
     headers.set("Accept", "application/json");
 
-    if (typeof window !== "undefined") {
-        const token = window.localStorage.getItem(
-            "stockjump_token"
-        );
+    const token = getStoredToken();
 
-        if (token) {
-            headers.set("Authorization", `Bearer ${token}`);
-        }
+    if (token) {
+        headers.set("Authorization", `Bearer ${token}`);
     }
 
     try {
@@ -381,6 +479,16 @@ async function apiRequest<T>(
         ) {
             throw new ApiError(
                 "The API request timed out. Please try again."
+            );
+        }
+
+        if (error instanceof TypeError) {
+            throw new ApiError(
+                `Unable to reach the StockJump API at ${baseUrl}. If you are testing locally, make sure the backend is running and allows requests from ${
+                    typeof window !== "undefined"
+                        ? window.location.origin
+                        : "this origin"
+                } (CORS).`
             );
         }
 
