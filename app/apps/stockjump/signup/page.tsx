@@ -4,6 +4,8 @@ import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { appConfig } from "../config";
+import { registerUser } from "../dashboard/lib/api";
+import { storeAuthSession } from "../dashboard/lib/session";
 
 export default function SignupPage() {
     const router = useRouter();
@@ -23,35 +25,14 @@ export default function SignupPage() {
         setError("");
 
         try {
-            const url = `${appConfig.api.baseUrl.trim()}/api/auth/register`;
-
-            const response = await fetch(url, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    name: name.trim(),
-                    email: email.trim(),
-                    password,
-                }),
+            const session = await registerUser({
+                name: name.trim(),
+                email: email.trim(),
+                password,
             });
 
-            let data: any;
-
-            try {
-                data = await response.json();
-            } catch {
-                throw new Error("Invalid response from server");
-            }
-
-            if (!response.ok || !data.success) {
-                throw new Error(
-                    data.message || "Unable to create account"
-                );
-            }
-
-            router.push(appConfig.links.login);
+            storeAuthSession(session);
+            router.push(appConfig.links.dashboard);
         } catch (error) {
             setError(
                 error instanceof Error
@@ -287,7 +268,7 @@ export default function SignupPage() {
                         </p>
 
                         <p className="mt-6 text-center text-xs leading-5 text-slate-600">
-                            By creating an account, you agree to StockJump's{" "}
+                            By creating an account, you agree to StockJump&apos;s{" "}
                             <Link
                                 href={appConfig.links.terms}
                                 className="underline decoration-slate-700 underline-offset-2 transition hover:text-slate-400"
