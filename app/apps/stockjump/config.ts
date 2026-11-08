@@ -17,9 +17,14 @@ export const appConfig = {
 
     api: {
         /**
-         * Defaults to the deployed API. Point this at a local/other backend by
-         * setting NEXT_PUBLIC_STOCKJUMP_API_URL (for example
-         * http://localhost:2026) before `npm run dev` / `npm run build`.
+         * Backend used by StockJump.
+         *
+         * Deployed builds use the Lambda URL below. For local testing, create
+         * `.env.local` and set:
+         *
+         *   NEXT_PUBLIC_STOCKJUMP_API_URL=http://localhost:2026
+         *
+         * then restart `npm run dev`.
          */
         baseUrl:
             process.env.NEXT_PUBLIC_STOCKJUMP_API_URL?.trim() ||
