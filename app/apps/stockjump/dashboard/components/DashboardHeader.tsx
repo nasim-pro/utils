@@ -2,17 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bell, LogOut, Rocket } from "lucide-react";
+import { LogOut, Rocket } from "lucide-react";
 import { appConfig } from "../../config";
 import { clearAuthSession } from "../lib/session";
 
-interface DashboardHeaderProps {
-    onProfileClick?: () => void;
-}
-
-export default function DashboardHeader({
-    onProfileClick,
-}: DashboardHeaderProps) {
+export default function DashboardHeader() {
     const router = useRouter();
 
     function handleLogout() {
@@ -38,26 +32,10 @@ export default function DashboardHeader({
                     </span>
                 </Link>
 
-                <div className="flex items-center gap-5">
-                    <button
-                        type="button"
-                        className="relative flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition hover:bg-white/5 hover:text-white"
-                        aria-label="Notifications"
-                    >
-                        <Bell className="h-[18px] w-[18px]" />
-
-                        <span className="absolute right-[5px] top-[4px] h-1.5 w-1.5 rounded-full bg-[#00d084]" />
-                    </button>
-
-                    <button
-                        type="button"
-                        onClick={onProfileClick}
-                        className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-purple-300 via-purple-400 to-orange-200 text-xs font-bold text-white ring-2 ring-white/10"
-                        aria-label="Profile"
-                        title="Profile"
-                    >
-                        <span>👨🏻</span>
-                    </button>
+                <div className="flex items-center gap-3">
+                    <span className="hidden text-[10px] font-semibold text-slate-500 sm:inline">
+                        Indian earnings, explained
+                    </span>
 
                     <button
                         type="button"
