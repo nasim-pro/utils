@@ -54,6 +54,190 @@ function currencyPrefix(value: number): string {
     return value < 0 ? "-₹" : "₹";
 }
 
+export function formatPercent(
+    value?: number | null,
+    digits = 1
+): string {
+    const number = toNumber(value);
+
+    if (number === null) {
+        return "-";
+    }
+
+    return `${number.toLocaleString("en-IN", {
+        minimumFractionDigits: digits,
+        maximumFractionDigits: digits,
+    })}%`;
+}
+
+/** Margin-style percentage without forcing trailing decimals. */
+export function formatMargin(value?: number | null): string {
+    const number = toNumber(value);
+
+    if (number === null) {
+        return "-";
+    }
+
+    return `${number.toLocaleString("en-IN", {
+        maximumFractionDigits: 1,
+    })}%`;
+}
+
+export function formatBps(value?: number | null): string {
+    const number = toNumber(value);
+
+    if (number === null) {
+        return "-";
+    }
+
+    const sign = number > 0 ? "+" : number < 0 ? "-" : "";
+
+    return `${sign}${Math.abs(number).toLocaleString("en-IN", {
+        maximumFractionDigits: 0,
+    })} bps`;
+}
+
+/**
+ * Margin as a percentage of the base. Returns null when the base is zero or
+ * missing so the UI can show "-" instead of Infinity.
+ */
+export function marginPercent(
+    part?: number | null,
+    whole?: number | null
+): number | null {
+    const numerator = toNumber(part);
+    const denominator = toNumber(whole);
+
+    if (
+        numerator === null ||
+        denominator === null ||
+        denominator === 0
+    ) {
+        return null;
+    }
+
+    return round((numerator / Math.abs(denominator)) * 100);
+}
+
+/** Difference between two percentages, expressed in basis points. */
+export function percentagePointDelta(
+    current?: number | null,
+    previous?: number | null
+): number | null {
+    const currentNumber = toNumber(current);
+    const previousNumber = toNumber(previous);
+
+    if (currentNumber === null || previousNumber === null) {
+        return null;
+    }
+
+    return round((currentNumber - previousNumber) * 100, 0);
+}
+
+/** Raw ratio used to spot unit mismatches (e.g. Lakhs vs Crores = 100x). */
+export function ratioOf(
+    current?: number | null,
+    previous?: number | null
+): number | null {
+    const currentNumber = toNumber(current);
+    const previousNumber = toNumber(previous);
+
+    if (
+        currentNumber === null ||
+        previousNumber === null ||
+        previousNumber === 0
+    ) {
+        return null;
+    }
+
+    return Math.abs(currentNumber / previousNumber);
+}
+
+export type MarketSession =
+    | "pre-market"
+    | "market-hours"
+    | "after-hours";
+
+export interface ReleaseSessionInfo {
+    session: MarketSession;
+    shortLabel: string;
+    timeLabel: string;
+    dateLabel: string;
+    isAfterHours: boolean;
+    isWeekend: boolean;
+    /** Minutes after midnight in IST. */
+    minutesOfDay: number;
+}
+
+/**
+ * Earnings releases are usually judged by when they hit the wire in IST:
+ * after 3:30 PM means the market reacts the next trading day. Holidays are
+ * not modelled, so weekends are the only non-trading days we can detect.
+ */
+export function releaseSessionInfo(
+    dateString?: string | null
+): ReleaseSessionInfo | null {
+    if (!dateString) {
+        return null;
+    }
+
+    const timestamp = new Date(dateString).getTime();
+
+    if (Number.isNaN(timestamp)) {
+        return null;
+    }
+
+    // India has no DST; shift to IST and format in UTC.
+    const ist = new Date(timestamp + 5.5 * 60 * 60 * 1000);
+    const hours = ist.getUTCHours();
+    const minutes = ist.getUTCMinutes();
+    const minutesOfDay = hours * 60 + minutes;
+    const day = ist.getUTCDay();
+    const isWeekend = day === 0 || day === 6;
+
+    let session: MarketSession;
+
+    if (minutesOfDay < 9 * 60 + 15) {
+        session = "pre-market";
+    } else if (minutesOfDay <= 15 * 60 + 30) {
+        session = "market-hours";
+    } else {
+        session = "after-hours";
+    }
+
+    const shortLabel =
+        session === "pre-market"
+            ? "Pre-open"
+            : session === "market-hours"
+                ? "Market hours"
+                : "After hours";
+
+    const timeLabel =
+        new Intl.DateTimeFormat("en-IN", {
+            hour: "numeric",
+            minute: "2-digit",
+            hour12: true,
+            timeZone: "UTC",
+        }).format(ist) + " IST";
+
+    const dateLabel = new Intl.DateTimeFormat("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        timeZone: "UTC",
+    }).format(ist);
+
+    return {
+        session,
+        shortLabel,
+        timeLabel,
+        dateLabel,
+        isAfterHours: session === "after-hours" || isWeekend,
+        isWeekend,
+        minutesOfDay,
+    };
+}
+
 export function formatNumber(
     value?: number | null,
     suffix = ""
