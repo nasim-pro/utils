@@ -36,6 +36,14 @@ export interface Stock {
     profitBeforeTax?: number | null;
     eps?: number | null;
 
+    /** Percentages computed from the reported values. */
+    operatingMargin?: number | null;
+    netMargin?: number | null;
+
+    /** Release timing in IST, used for the next-day reaction badge. */
+    releaseSession?: string | null;
+    isAfterHours?: boolean;
+
     /** Used by the strong-movers view. */
     currentValue?: number | null;
     previousValue?: number | null;

@@ -6,10 +6,13 @@ import {
     useState,
     type ReactNode,
 } from "react";
+import Link from "next/link";
 import {
     ArrowDown,
     ArrowUp,
+    ArrowUpDown,
     RefreshCw,
+    Star,
 } from "lucide-react";
 
 import DashboardHeader from "./components/DashboardHeader";
@@ -17,7 +20,6 @@ import StockSearch from "./components/StockSearch";
 import StockTabs, {
     type DashboardTab,
 } from "./components/StockTabs";
-import TelegramBanner from "./components/TelegramBanner";
 import EarningsTable from "./components/EarningsTable";
 import type { Stock } from "./components/types";
 import {
@@ -34,9 +36,12 @@ import {
     type ResultRecord,
 } from "./lib/api";
 import {
+    marginPercent,
     metricLabel as metricLabelFor,
     periodLabel,
+    releaseSessionInfo,
 } from "./lib/format";
+import { useWatchlist } from "./lib/watchlist";
 
 type FinancialFilter =
     | "all"
@@ -45,8 +50,30 @@ type FinancialFilter =
 
 type MoverDirection = "gainers" | "losers" | "all";
 
+type QualityFilter =
+    | "all"
+    | "profitable"
+    | "loss-making"
+    | "after-hours";
+
+type SortKey =
+    | "released"
+    | "revenue"
+    | "netProfit"
+    | "operatingMargin"
+    | "eps";
+
 function recentToStock(record: ResultRecord): Stock {
     const metrics = record.metricsInCrores ?? {};
+    const revenue = metrics.revenue ?? record.revenue;
+    const netProfit =
+        metrics.netProfit ?? record.netProfit;
+    const operatingProfit =
+        metrics.operatingProfit ??
+        record.operatingProfit;
+    const release = releaseSessionInfo(
+        record.broadcastDate
+    );
 
     return {
         id:
@@ -64,17 +91,20 @@ function recentToStock(record: ResultRecord): Stock {
         consolidated: record.consolidated,
         reportType: record.reportType,
         isFinancial: record.isFinancial,
-        revenue:
-            metrics.revenue ?? record.revenue,
-        netProfit:
-            metrics.netProfit ?? record.netProfit,
-        operatingProfit:
-            metrics.operatingProfit ??
-            record.operatingProfit,
+        revenue,
+        netProfit,
+        operatingProfit,
         profitBeforeTax:
             metrics.profitBeforeTax ??
             record.profitBeforeTax,
         eps: metrics.eps ?? record.eps,
+        operatingMargin: marginPercent(
+            operatingProfit,
+            revenue
+        ),
+        netMargin: marginPercent(netProfit, revenue),
+        releaseSession: release?.shortLabel ?? null,
+        isAfterHours: release?.isAfterHours ?? false,
         currentPrice: record.currentPrice,
         marketCap: record.marketCap,
         pe: record.pe,
@@ -116,6 +146,14 @@ function moverToStock(item: MoverItem): Stock {
         profitBeforeTax:
             current.profitBeforeTax ?? null,
         eps: current.eps ?? null,
+        operatingMargin: marginPercent(
+            current.operatingProfit,
+            current.revenue
+        ),
+        netMargin: marginPercent(
+            current.netProfit,
+            current.revenue
+        ),
         currentValue: current[metric] ?? null,
         previousValue: previous[metric] ?? null,
         growth: item.selectedGrowth ?? null,
@@ -241,10 +279,18 @@ export default function DashboardPage() {
     const [activeTab, setActiveTab] =
         useState<DashboardTab>("recent");
 
-    const [bannerVisible, setBannerVisible] =
-        useState(true);
-
     const [query, setQuery] = useState("");
+    const { watchlist, toggle: toggleWatch } =
+        useWatchlist();
+
+    const [sortKey, setSortKey] =
+        useState<SortKey>("released");
+    const [sortDirection, setSortDirection] =
+        useState<"asc" | "desc">("desc");
+    const [qualityFilter, setQualityFilter] =
+        useState<QualityFilter>("all");
+    const [excludeExtremes, setExcludeExtremes] =
+        useState(false);
 
     // Recent earnings / latest stocks
     const [recent, setRecent] =
@@ -313,11 +359,21 @@ export default function DashboardPage() {
     }, []);
 
     const recentDaysForTab =
-        activeTab === "all" ? 90 : recentDays;
+        activeTab === "all" || activeTab === "watchlist"
+            ? 90
+            : recentDays;
     const recentPageForTab =
-        activeTab === "all" ? allPage : recentPage;
+        activeTab === "all"
+            ? allPage
+            : activeTab === "watchlist"
+              ? 1
+              : recentPage;
     const recentLimit =
-        activeTab === "all" ? 50 : 25;
+        activeTab === "all"
+            ? 50
+            : activeTab === "watchlist"
+              ? 100
+              : 25;
     const customRangeActive =
         activeTab === "recent" &&
         (recentFrom !== "" || recentTo !== "");
@@ -335,7 +391,8 @@ export default function DashboardPage() {
     useEffect(() => {
         if (
             activeTab !== "recent" &&
-            activeTab !== "all"
+            activeTab !== "all" &&
+            activeTab !== "watchlist"
         ) {
             return;
         }
@@ -475,12 +532,15 @@ export default function DashboardPage() {
     );
 
     const filteredStocks = useMemo(() => {
-        let result: Stock[];
+        let result: Stock[] =
+            activeTab === "top"
+                ? [...moverRows]
+                : [...recentRows];
 
-        if (activeTab === "top") {
-            result = [...moverRows];
-        } else {
-            result = [...recentRows];
+        if (activeTab === "watchlist") {
+            result = result.filter((stock) =>
+                watchlist.includes(stock.symbol.toUpperCase())
+            );
         }
 
         if (query) {
@@ -529,6 +589,74 @@ export default function DashboardPage() {
             );
         }
 
+        if (
+            activeTab === "top" &&
+            excludeExtremes
+        ) {
+            result = result.filter(
+                (stock) =>
+                    Math.abs(stock.growth ?? 0) < 1000
+            );
+        }
+
+        if (qualityFilter === "profitable") {
+            result = result.filter(
+                (stock) => (stock.netProfit ?? 0) > 0
+            );
+        }
+
+        if (qualityFilter === "loss-making") {
+            result = result.filter(
+                (stock) => (stock.netProfit ?? 0) < 0
+            );
+        }
+
+        if (qualityFilter === "after-hours") {
+            result = result.filter(
+                (stock) => stock.isAfterHours === true
+            );
+        }
+
+        const sortValue = (stock: Stock): number | null => {
+            switch (sortKey) {
+                case "revenue":
+                    return stock.revenue ?? null;
+                case "netProfit":
+                    return stock.netProfit ?? null;
+                case "operatingMargin":
+                    return stock.operatingMargin ?? null;
+                case "eps":
+                    return stock.eps ?? null;
+                default:
+                    return stock.broadcastDate
+                        ? new Date(
+                              stock.broadcastDate
+                          ).getTime()
+                        : null;
+            }
+        };
+
+        result.sort((a, b) => {
+            const left = sortValue(a);
+            const right = sortValue(b);
+
+            if (left === null && right === null) {
+                return 0;
+            }
+
+            if (left === null) {
+                return 1;
+            }
+
+            if (right === null) {
+                return -1;
+            }
+
+            return sortDirection === "asc"
+                ? left - right
+                : right - left;
+        });
+
         return result;
     }, [
         activeTab,
@@ -536,6 +664,11 @@ export default function DashboardPage() {
         moverRows,
         query,
         moverDirection,
+        watchlist,
+        qualityFilter,
+        excludeExtremes,
+        sortKey,
+        sortDirection,
     ]);
 
     const activeLoading =
@@ -572,6 +705,8 @@ export default function DashboardPage() {
             setMoverPage(page);
         } else if (activeTab === "all") {
             setAllPage(page);
+        } else if (activeTab === "watchlist") {
+            return;
         } else {
             setRecentPage(page);
         }
@@ -611,7 +746,9 @@ export default function DashboardPage() {
                   })`
             : activeTab === "top"
                 ? "Strong Movers"
-                : "Latest Stocks (90d)";
+                : activeTab === "watchlist"
+                  ? `My Watchlist (${watchlist.length})`
+                  : "Latest Stocks (90d)";
 
     return (
         <div className="min-h-screen bg-[#070d18] text-white">
@@ -621,6 +758,29 @@ export default function DashboardPage() {
                 <div className="mb-6 flex flex-col gap-4">
                     <div className="mx-auto w-full max-w-2xl">
                         <StockSearch onSearch={setQuery} />
+
+                        {query && (
+                            <div className="mt-2 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center text-[10px] font-medium text-slate-500">
+                                <span>
+                                    Filtering the loaded page.
+                                </span>
+
+                                {/^[A-Za-z0-9&.-]{1,20}$/.test(
+                                    query
+                                ) && (
+                                    <Link
+                                        href={`/apps/stockjump/dashboard/stock?symbol=${encodeURIComponent(
+                                            query.toUpperCase()
+                                        )}`}
+                                        className="font-bold text-[#00d084] hover:underline"
+                                    >
+                                        Open{" "}
+                                        {query.toUpperCase()}{" "}
+                                        detail →
+                                    </Link>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     <div className="flex justify-center">
@@ -632,7 +792,8 @@ export default function DashboardPage() {
                 </div>
 
                 {(activeTab === "recent" ||
-                    activeTab === "all") && (
+                    activeTab === "all" ||
+                    activeTab === "watchlist") && (
                     <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-white/[0.06] bg-[#0b1422] p-4">
                         <div className="flex flex-wrap items-center gap-3">
                             {activeTab === "recent" && (
@@ -765,6 +926,102 @@ export default function DashboardPage() {
                             <RefreshCw className="h-3.5 w-3.5" />
                             Refresh
                         </button>
+                    </div>
+                )}
+
+                {activeTab !== "top" && (
+                    <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/[0.06] bg-[#0b1422] px-4 py-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <span className="mr-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                                Show
+                            </span>
+
+                            {(
+                                [
+                                    ["all", "All"],
+                                    [
+                                        "profitable",
+                                        "Profitable",
+                                    ],
+                                    [
+                                        "loss-making",
+                                        "Loss-making",
+                                    ],
+                                    [
+                                        "after-hours",
+                                        "After hours",
+                                    ],
+                                ] as const
+                            ).map(([value, label]) => (
+                                <Pill
+                                    key={value}
+                                    active={
+                                        qualityFilter === value
+                                    }
+                                    onClick={() =>
+                                        setQualityFilter(value)
+                                    }
+                                >
+                                    {label}
+                                </Pill>
+                            ))}
+
+                            {activeTab === "watchlist" && (
+                                <span className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.06] bg-[#111b2b] px-2.5 py-1.5 text-[10px] font-semibold text-slate-500">
+                                    <Star className="h-3 w-3" />
+                                    Saved in this browser
+                                </span>
+                            )}
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2">
+                            <FilterSelect
+                                label="Sort"
+                                value={sortKey}
+                                onChange={(value) =>
+                                    setSortKey(
+                                        value as SortKey
+                                    )
+                                }
+                            >
+                                <option value="released">
+                                    Release date
+                                </option>
+                                <option value="revenue">
+                                    Revenue
+                                </option>
+                                <option value="netProfit">
+                                    Net profit
+                                </option>
+                                <option value="operatingMargin">
+                                    Operating margin
+                                </option>
+                                <option value="eps">EPS</option>
+                            </FilterSelect>
+
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    setSortDirection(
+                                        (current) =>
+                                            current === "asc"
+                                                ? "desc"
+                                                : "asc"
+                                    )
+                                }
+                                className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-white/[0.08] bg-[#111b2b] px-2.5 text-[11px] font-semibold text-slate-300 transition hover:text-white"
+                                title="Toggle sort direction"
+                            >
+                                <ArrowUpDown className="h-3.5 w-3.5" />
+                                {sortKey === "released"
+                                    ? sortDirection === "desc"
+                                        ? "Newest first"
+                                        : "Oldest first"
+                                    : sortDirection === "desc"
+                                      ? "High → low"
+                                      : "Low → high"}
+                            </button>
+                        </div>
                     </div>
                 )}
 
@@ -951,6 +1208,18 @@ export default function DashboardPage() {
                                 >
                                     All
                                 </Pill>
+
+                                <Pill
+                                    active={excludeExtremes}
+                                    onClick={() =>
+                                        setExcludeExtremes(
+                                            (current) =>
+                                                !current
+                                        )
+                                    }
+                                >
+                                    Hide extreme
+                                </Pill>
                             </div>
 
                             <div className="flex flex-wrap items-center gap-2 text-[11px] font-medium text-slate-500">
@@ -982,16 +1251,6 @@ export default function DashboardPage() {
                                     )}
                             </div>
                         </div>
-                    </div>
-                )}
-
-                {bannerVisible && activeTab !== "top" && (
-                    <div className="mb-6">
-                        <TelegramBanner
-                            onClose={() =>
-                                setBannerVisible(false)
-                            }
-                        />
                     </div>
                 )}
 
@@ -1059,11 +1318,15 @@ export default function DashboardPage() {
                             </div>
                         ) : filteredStocks.length === 0 ? (
                             <div className="w-full py-12 text-center text-sm font-medium text-slate-500">
-                                {activeTab === "top"
-                                    ? "No movers matched. Try another period, metric or basis."
-                                    : activeTab === "all"
+                                {activeTab === "watchlist"
+                                    ? watchlist.length === 0
+                                        ? "Your watchlist is empty. Star a company from Recent Earnings or from its detail page to follow it here."
+                                        : "None of your watched companies reported in the last 90 days, or the current filters hide them."
+                                    : activeTab === "top"
+                                      ? "No movers matched. Try another period, metric or basis."
+                                      : activeTab === "all"
                                         ? "No results in the last 90 days."
-                                        : "No results in this window. Try 30 days or 'All bases'."}
+                                        : "No results match this window and filter. Try 30 days, 'All bases' or clear the quality filter."}
                             </div>
                         ) : (
                             <EarningsTable
@@ -1074,18 +1337,22 @@ export default function DashboardPage() {
                                 metricLabel={metricLabelFor(
                                     moverMetric
                                 )}
+                                starredSymbols={watchlist}
+                                onToggleStar={toggleWatch}
                             />
                         )}
                     </div>
 
-                    {!activeLoading && !activeError && (
-                        <Pagination
-                            page={activePage}
-                            total={activeTotal}
-                            limit={activeLimit}
-                            onPage={changePage}
-                        />
-                    )}
+                    {!activeLoading &&
+                        !activeError &&
+                        activeTab !== "watchlist" && (
+                            <Pagination
+                                page={activePage}
+                                total={activeTotal}
+                                limit={activeLimit}
+                                onPage={changePage}
+                            />
+                        )}
                 </div>
             </main>
         </div>
