@@ -5,11 +5,14 @@ import Link from "next/link";
 import {
     AlertTriangle,
     ArrowLeft,
-    Send,
+    ExternalLink,
+    FileText,
     Sparkles,
     Star,
 } from "lucide-react";
 import DashboardHeader from "../components/DashboardHeader";
+import EarningsReportCard from "../components/EarningsReportCard";
+import MarginTrendChart from "../components/MarginTrendChart";
 import {
     fetchAnalysisHistory,
     fetchQuarterlyHistory,
@@ -21,6 +24,9 @@ import {
     type StockDetailData,
 } from "../lib/api";
 import {
+    analyzeEarnings,
+} from "../lib/analysis";
+import {
     calculateGrowth,
     formatCrores,
     formatDate,
@@ -31,6 +37,7 @@ import {
     growthClass,
     periodLabel,
 } from "../lib/format";
+import { useWatchlist } from "../lib/watchlist";
 
 interface StockDetailClientProps {
     symbol: string;
@@ -420,7 +427,9 @@ export default function StockDetailClient({
         useState<DetailTab>("Financials");
     const [basisMode, setBasisMode] =
         useState<BasisMode>("preferred");
-    const [starred, setStarred] = useState(false);
+    const { isWatched, toggle: toggleWatch } =
+        useWatchlist();
+    const starred = isWatched(ticker);
 
     const [detail, setDetail] =
         useState<StockDetailData | null>(null);
@@ -614,16 +623,31 @@ export default function StockDetailClient({
     const latestQuarter = selectedQuarterly[0] ?? null;
     const latestYear = selectedYearly[0] ?? null;
 
+    // Keep growth math on one basis; `preferred` can mix consolidated and
+    // standalone across periods when a basis is missing.
+    const latestQuarterBasis =
+        latestQuarter?.consolidated === true;
+    const comparableQuarterly = selectedQuarterly.filter(
+        (record) =>
+            (record.consolidated === true) ===
+            latestQuarterBasis
+    );
+    const latestYearBasis = latestYear?.consolidated === true;
+    const comparableYearly = selectedYearly.filter(
+        (record) =>
+            (record.consolidated === true) === latestYearBasis
+    );
+
     const previousQuarterRecord = previousQuarter(
-        selectedQuarterly,
+        comparableQuarterly,
         latestQuarter
     );
     const yearAgoQuarter = sameQuarterLastYear(
-        selectedQuarterly,
+        comparableQuarterly,
         latestQuarter
     );
     const previousYearRecord = previousYear(
-        selectedYearly,
+        comparableYearly,
         latestYear
     );
 
@@ -657,6 +681,30 @@ export default function StockDetailClient({
             latestYear?.currentPrice ??
             null,
     };
+
+    const analysis = useMemo(
+        () =>
+            analyzeEarnings({
+                quarterly: selectedQuarterly,
+                yearly: selectedYearly,
+                marketCap: fundamentals.marketCap,
+            }),
+        [
+            selectedQuarterly,
+            selectedYearly,
+            fundamentals.marketCap,
+        ]
+    );
+
+    /** Hide period-over-period math when the analysis suspects mixed units. */
+    const safeGrowth = (
+        current: ResultRecord | null,
+        previous: ResultRecord | null,
+        field: MetricField
+    ): number | null =>
+        analysis.comparisonsWithheld
+            ? null
+            : growth(current, previous, field);
 
     const companyName =
         detail?.stockName ??
@@ -753,19 +801,19 @@ export default function StockDetailClient({
                         ?.revenue
                 ),
                 qoq: latestQuarter
-                    ? growth(
+                    ? safeGrowth(
                         latestQuarter,
                         previousQuarterRecord,
                         "revenue"
                     )
                     : null,
                 yoy: latestQuarter
-                    ? growth(
+                    ? safeGrowth(
                         latestQuarter,
                         yearAgoQuarter,
                         "revenue"
                     )
-                    : growth(
+                    : safeGrowth(
                         latestYear,
                         previousYearRecord,
                         "revenue"
@@ -778,19 +826,19 @@ export default function StockDetailClient({
                         ?.netProfit
                 ),
                 qoq: latestQuarter
-                    ? growth(
+                    ? safeGrowth(
                         latestQuarter,
                         previousQuarterRecord,
                         "netProfit"
                     )
                     : null,
                 yoy: latestQuarter
-                    ? growth(
+                    ? safeGrowth(
                         latestQuarter,
                         yearAgoQuarter,
                         "netProfit"
                     )
-                    : growth(
+                    : safeGrowth(
                         latestYear,
                         previousYearRecord,
                         "netProfit"
@@ -803,14 +851,14 @@ export default function StockDetailClient({
                         ?.operatingProfit
                 ),
                 qoq: latestQuarter
-                    ? growth(
+                    ? safeGrowth(
                         latestQuarter,
                         previousQuarterRecord,
                         "operatingProfit"
                     )
                     : null,
                 yoy: latestQuarter
-                    ? growth(
+                    ? safeGrowth(
                         latestQuarter,
                         yearAgoQuarter,
                         "operatingProfit"
@@ -825,14 +873,14 @@ export default function StockDetailClient({
                     summaryRecord.eps
                 ),
                 qoq: latestQuarter
-                    ? growth(
+                    ? safeGrowth(
                         latestQuarter,
                         previousQuarterRecord,
                         "eps"
                     )
                     : null,
                 yoy: latestQuarter
-                    ? growth(
+                    ? safeGrowth(
                         latestQuarter,
                         yearAgoQuarter,
                         "eps"
@@ -1059,15 +1107,22 @@ export default function StockDetailClient({
 
                         <button
                             type="button"
-                            onClick={() =>
-                                setStarred(!starred)
-                            }
+                            onClick={() => toggleWatch(ticker)}
                             className={`flex h-11 w-11 shrink-0 items-center justify-center self-start rounded-2xl border transition ${
                                 starred
                                     ? "border-yellow-400/40 bg-yellow-400/10 text-yellow-400"
                                     : "border-white/10 bg-[#121c2e] text-slate-400 hover:text-white"
                             }`}
-                            aria-label="Bookmark stock"
+                            aria-label={
+                                starred
+                                    ? `Remove ${ticker} from watchlist`
+                                    : `Add ${ticker} to watchlist`
+                            }
+                            title={
+                                starred
+                                    ? "In your watchlist"
+                                    : "Add to watchlist"
+                            }
                         >
                             <Star
                                 className={`h-5 w-5 ${
@@ -1111,7 +1166,29 @@ export default function StockDetailClient({
                 </div>
 
                 {activeTab === "Financials" && (
-                    <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-3">
+                    <>
+                        <div className="mt-8">
+                            {analysis.latest && (
+                                <EarningsReportCard
+                                    analysis={analysis}
+                                    symbol={ticker}
+                                    companyName={companyName}
+                                    basisLabel={
+                                        basisMode === "preferred"
+                                            ? `${basisLabel(
+                                                  analysis.latest
+                                                      .consolidated
+                                              )} history`
+                                            : basisLabel(
+                                                  basisMode ===
+                                                      "consolidated"
+                                              )
+                                    }
+                                />
+                            )}
+                        </div>
+
+                        <div className="mt-6 grid grid-cols-1 gap-8 lg:grid-cols-3">
                         <div className="space-y-8 lg:col-span-2">
                             {metricCards.length > 0 ? (
                                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -1201,6 +1278,49 @@ export default function StockDetailClient({
                                     }
                                 />
                             </div>
+
+                            <div className="rounded-2xl border border-white/[0.06] bg-[#0b1422] p-6 shadow-md">
+                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                    <div>
+                                        <h3 className="text-sm font-bold text-slate-200">
+                                            📈 Margin trend
+                                        </h3>
+
+                                        <p className="mt-1 text-[11px] text-slate-500">
+                                            Last{" "}
+                                            {Math.min(
+                                                8,
+                                                selectedQuarterly.length
+                                            )}{" "}
+                                            reported quarters
+                                        </p>
+                                    </div>
+
+                                    <div className="flex gap-4 text-[10px] font-semibold text-slate-400">
+                                        <span className="flex items-center gap-1.5">
+                                            <span className="h-2 w-2 rounded-full bg-[#00d084]" />
+                                            Operating
+                                        </span>
+
+                                        <span className="flex items-center gap-1.5">
+                                            <span className="h-2 w-2 rounded-full bg-amber-500" />
+                                            Net
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <MarginTrendChart
+                                    records={selectedQuarterly}
+                                />
+
+                                <p className="mt-1 text-[10px] leading-relaxed text-slate-500">
+                                    Operating margin = operating
+                                    profit ÷ revenue. Net margin =
+                                    PAT ÷ revenue. Margins are shown
+                                    only when the underlying
+                                    values are present.
+                                </p>
+                            </div>
                         </div>
 
                         <div className="space-y-6">
@@ -1282,13 +1402,49 @@ export default function StockDetailClient({
                                             Release
                                         </span>
 
-                                        <span className="font-semibold text-slate-200">
+                                        <span className="text-right font-semibold text-slate-200">
                                             {formatDate(
                                                 latestQuarter?.broadcastDate ??
                                                 latestYear?.broadcastDate
                                             )}
+
+                                            {analysis.release && (
+                                                <span className="mt-0.5 block text-[10px] font-medium text-slate-500">
+                                                    {
+                                                        analysis
+                                                            .release
+                                                            .timeLabel
+                                                    }{" "}
+                                                    ·{" "}
+                                                    {
+                                                        analysis
+                                                            .release
+                                                            .shortLabel
+                                                    }
+                                                </span>
+                                            )}
                                         </span>
                                     </div>
+
+                                    {summaryRecord?.sourceUrl && (
+                                        <div className="flex justify-between gap-4">
+                                            <span className="text-slate-500">
+                                                Filing
+                                            </span>
+
+                                            <a
+                                                href={
+                                                    summaryRecord.sourceUrl
+                                                }
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-flex items-center gap-1 font-semibold text-[#00d084] hover:underline"
+                                            >
+                                                Original
+                                                <ExternalLink className="h-3 w-3" />
+                                            </a>
+                                        </div>
+                                    )}
 
                                     <div className="flex justify-between gap-4">
                                         <span className="text-slate-500">
@@ -1405,36 +1561,39 @@ export default function StockDetailClient({
                                 )}
                             </div>
 
-                            <div className="rounded-2xl border border-[#0d4d6b] bg-[#072d42] p-6 text-center shadow-md">
-                                <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-[#168dcc] text-white shadow">
-                                    <Send
-                                        className="h-4 w-4"
-                                        fill="currentColor"
-                                    />
+                            <div className="rounded-2xl border border-white/[0.06] bg-[#0b1422] p-6">
+                                <div className="flex items-center gap-2">
+                                    <Sparkles className="h-4 w-4 text-[#00d084]" />
+
+                                    <h3 className="text-sm font-bold tracking-wide text-white">
+                                        About this report
+                                    </h3>
                                 </div>
 
-                                <h4 className="text-sm font-bold text-white">
-                                    Track {ticker} on Telegram
-                                </h4>
-
-                                <p className="mt-1.5 text-xs leading-relaxed text-slate-300">
-                                    Get notified instantly when new
-                                    earnings drop for this stock.
+                                <p className="mt-3 text-[11px] leading-relaxed text-slate-400">
+                                    Earnings are read against this
+                                    company&apos;s own history, not
+                                    analyst estimates. Always open the
+                                    original filing before acting on
+                                    a number.
                                 </p>
 
-                                <a
-                                    href="#"
-                                    className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#168dcc] py-3 text-xs font-bold text-white shadow transition hover:bg-[#1b9de0]"
-                                >
-                                    <Send
-                                        className="h-3.5 w-3.5"
-                                        fill="currentColor"
-                                    />
-                                    Join Channel
-                                </a>
+                                {summaryRecord?.sourceUrl && (
+                                    <a
+                                        href={summaryRecord.sourceUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-[#111b2b] py-3 text-xs font-bold text-slate-200 transition hover:text-white"
+                                    >
+                                        <FileText className="h-3.5 w-3.5" />
+                                        Open NSE filing
+                                        <ExternalLink className="h-3 w-3 opacity-60" />
+                                    </a>
+                                )}
                             </div>
                         </div>
                     </div>
+                    </>
                 )}
 
                 {activeTab === "Growth" && (
@@ -1462,6 +1621,18 @@ export default function StockDetailClient({
                                         )}
                                 </span>
                             </div>
+
+                            {analysis.comparisonsWithheld && (
+                                <div className="mt-4 rounded-xl border border-amber-400/20 bg-amber-400/5 px-3 py-2.5 text-[11px] leading-relaxed text-amber-200/80">
+                                    QoQ and YoY are hidden because
+                                    these periods appear to use
+                                    different units (Lakhs vs
+                                    Crores). Switch the basis
+                                    above, or fix the source
+                                    record, before reading
+                                    period comparisons.
+                                </div>
+                            )}
 
                             <div className="mt-6 overflow-x-auto">
                                 <table className="w-full min-w-[760px] text-left text-xs">
@@ -1497,37 +1668,45 @@ export default function StockDetailClient({
                                     <tbody>
                                         {selectedQuarterly.map(
                                             (item, index) => {
+                                                const basisSeries =
+                                                    selectedQuarterly.filter(
+                                                        (entry) =>
+                                                            (entry.consolidated ===
+                                                                true) ===
+                                                            (item.consolidated ===
+                                                                true)
+                                                    );
                                                 const prev =
                                                     previousQuarter(
-                                                        selectedQuarterly,
+                                                        basisSeries,
                                                         item
                                                     );
                                                 const lastYear =
                                                     sameQuarterLastYear(
-                                                        selectedQuarterly,
+                                                        basisSeries,
                                                         item
                                                     );
 
                                                 const revenueQoQ =
-                                                    growth(
+                                                    safeGrowth(
                                                         item,
                                                         prev,
                                                         "revenue"
                                                     );
                                                 const revenueYoY =
-                                                    growth(
+                                                    safeGrowth(
                                                         item,
                                                         lastYear,
                                                         "revenue"
                                                     );
                                                 const patQoQ =
-                                                    growth(
+                                                    safeGrowth(
                                                         item,
                                                         prev,
                                                         "netProfit"
                                                     );
                                                 const patYoY =
-                                                    growth(
+                                                    safeGrowth(
                                                         item,
                                                         lastYear,
                                                         "netProfit"
@@ -1665,9 +1844,17 @@ export default function StockDetailClient({
                                     <tbody>
                                         {selectedYearly.map(
                                             (item, index) => {
+                                                const basisSeries =
+                                                    selectedYearly.filter(
+                                                        (entry) =>
+                                                            (entry.consolidated ===
+                                                                true) ===
+                                                            (item.consolidated ===
+                                                                true)
+                                                    );
                                                 const prev =
                                                     previousYear(
-                                                        selectedYearly,
+                                                        basisSeries,
                                                         item
                                                     );
 
@@ -1693,7 +1880,7 @@ export default function StockDetailClient({
 
                                                         <td
                                                             className={`py-4 text-right font-bold ${growthClass(
-                                                                growth(
+                                                                safeGrowth(
                                                                     item,
                                                                     prev,
                                                                     "revenue"
@@ -1701,7 +1888,7 @@ export default function StockDetailClient({
                                                             )}`}
                                                         >
                                                             {formatGrowth(
-                                                                growth(
+                                                                safeGrowth(
                                                                     item,
                                                                     prev,
                                                                     "revenue"
@@ -1719,7 +1906,7 @@ export default function StockDetailClient({
 
                                                         <td
                                                             className={`py-4 text-right font-bold ${growthClass(
-                                                                growth(
+                                                                safeGrowth(
                                                                     item,
                                                                     prev,
                                                                     "netProfit"
@@ -1727,7 +1914,7 @@ export default function StockDetailClient({
                                                             )}`}
                                                         >
                                                             {formatGrowth(
-                                                                growth(
+                                                                safeGrowth(
                                                                     item,
                                                                     prev,
                                                                     "netProfit"
@@ -1853,6 +2040,144 @@ export default function StockDetailClient({
                                     </p>
                                 </div>
                             ))}
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                            <div className="rounded-2xl border border-white/[0.06] bg-[#0b1422] p-6">
+                                <h3 className="text-sm font-bold text-white">
+                                    Trailing twelve months
+                                </h3>
+
+                                <p className="mt-1 text-[11px] text-slate-500">
+                                    {analysis.ttm.label ??
+                                        "Not enough quarters for a TTM view."}
+                                </p>
+
+                                <div className="mt-5 grid grid-cols-3 gap-4">
+                                    <div>
+                                        <p className="text-[10px] uppercase tracking-wider text-slate-500">
+                                            Revenue
+                                        </p>
+                                        <p className="mt-1.5 text-sm font-bold text-slate-200">
+                                            {formatCrores(
+                                                analysis.ttm.revenue
+                                            )}
+                                        </p>
+                                        {analysis.ttm.growth
+                                            .revenue !== null && (
+                                            <p
+                                                className={`mt-0.5 text-[10px] font-semibold ${growthClass(
+                                                    analysis.ttm.growth
+                                                        .revenue
+                                                )}`}
+                                            >
+                                                {formatGrowth(
+                                                    analysis.ttm.growth
+                                                        .revenue
+                                                )}{" "}
+                                                vs prior TTM
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    <div>
+                                        <p className="text-[10px] uppercase tracking-wider text-slate-500">
+                                            Net profit
+                                        </p>
+                                        <p className="mt-1.5 text-sm font-bold text-slate-200">
+                                            {formatCrores(
+                                                analysis.ttm
+                                                    .netProfit
+                                            )}
+                                        </p>
+                                        {analysis.ttm.growth
+                                            .netProfit !== null && (
+                                            <p
+                                                className={`mt-0.5 text-[10px] font-semibold ${growthClass(
+                                                    analysis.ttm.growth
+                                                        .netProfit
+                                                )}`}
+                                            >
+                                                {formatGrowth(
+                                                    analysis.ttm.growth
+                                                        .netProfit
+                                                )}{" "}
+                                                vs prior TTM
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    <div>
+                                        <p className="text-[10px] uppercase tracking-wider text-slate-500">
+                                            EPS
+                                        </p>
+                                        <p className="mt-1.5 text-sm font-bold text-slate-200">
+                                            {formatRupees(
+                                                analysis.ttm.eps
+                                            )}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="rounded-2xl border border-white/[0.06] bg-[#0b1422] p-6">
+                                <h3 className="text-sm font-bold text-white">
+                                    Compound growth
+                                </h3>
+
+                                <p className="mt-1 text-[11px] text-slate-500">
+                                    Annual CAGR from the yearly
+                                    records, positive values only.
+                                </p>
+
+                                <div className="mt-5 grid grid-cols-2 gap-x-6 gap-y-4">
+                                    {(
+                                        [
+                                            [
+                                                "Revenue · 3Y",
+                                                analysis.cagr
+                                                    .revenue3,
+                                            ],
+                                            [
+                                                "Revenue · 5Y",
+                                                analysis.cagr
+                                                    .revenue5,
+                                            ],
+                                            [
+                                                "Net profit · 3Y",
+                                                analysis.cagr
+                                                    .netProfit3,
+                                            ],
+                                            [
+                                                "Net profit · 5Y",
+                                                analysis.cagr
+                                                    .netProfit5,
+                                            ],
+                                        ] as const
+                                    ).map(([label, value]) => (
+                                        <div key={label}>
+                                            <p className="text-[10px] uppercase tracking-wider text-slate-500">
+                                                {label}
+                                            </p>
+                                            <p
+                                                className={`mt-1 text-sm font-bold ${
+                                                    value === null
+                                                        ? "text-slate-500"
+                                                        : growthClass(
+                                                              value
+                                                          )
+                                                }`}
+                                            >
+                                                {value === null
+                                                    ? "-"
+                                                    : formatGrowth(
+                                                          value
+                                                      )}
+                                            </p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
 
                         <div className="rounded-2xl border border-white/[0.06] bg-[#0b1422] p-6">

@@ -1,8 +1,8 @@
 "use client";
 
-import { BarChart3, List, TrendingUp } from "lucide-react";
+import { BarChart3, List, Star, TrendingUp } from "lucide-react";
 
-export type DashboardTab = "recent" | "top" | "all";
+export type DashboardTab = "recent" | "top" | "all" | "watchlist";
 
 interface StockTabsProps {
     activeTab: DashboardTab;
@@ -13,11 +13,12 @@ const tabs = [
     { id: "recent" as const, label: "Recent Earnings", icon: TrendingUp },
     { id: "top" as const, label: "Strong Movers", icon: BarChart3 },
     { id: "all" as const, label: "All Stocks", icon: List },
+    { id: "watchlist" as const, label: "Watchlist", icon: Star },
 ];
 
 export default function StockTabs({ activeTab, onChange }: StockTabsProps) {
     return (
-        <div className="flex items-center gap-2 overflow-x-auto py-1">
+        <div className="flex flex-wrap items-center justify-center gap-2 py-1">
             {tabs.map((tab) => {
                 const Icon = tab.icon;
                 const active = activeTab === tab.id;

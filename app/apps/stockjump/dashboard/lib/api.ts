@@ -853,7 +853,14 @@ export async function fetchRecentQuarterly(
         ? response
         : response.data ?? [];
 
-    const data = rawData.map(normalizeResult);
+    const normalized = rawData.map(normalizeResult);
+    // The deployed API does not always collapse consolidated + standalone
+    // rows for `consolidated=preferred`. Mirror the documented behaviour so
+    // the "Preferred" filter shows one row per company and period.
+    const data =
+        (params.consolidated ?? "preferred") === "preferred"
+            ? pickPreferredSeries(normalized)
+            : normalized;
     const limit =
         !Array.isArray(response) && response.limit
             ? response.limit
@@ -1194,7 +1201,9 @@ export function pickPreferredSeries(
     const byPeriod = new Map<string, ResultRecord>();
 
     for (const record of records) {
-        const key = `${record.year ?? ""}-${record.quarter ?? ""}`;
+        const key = `${record.symbol ?? ""}|${
+            record.year ?? ""
+        }-${record.quarter ?? ""}`;
         const existing = byPeriod.get(key);
 
         if (

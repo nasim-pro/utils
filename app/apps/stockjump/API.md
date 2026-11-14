@@ -110,6 +110,60 @@ be reported in Lakhs or Crores. Always render `metricsInCrores`:
 Crores by the backend; the UI marks those rows with an asterisk and shows a
 legacy-unit warning.
 
+### Unit-mismatch detection
+
+The deployed API contains a few periods whose raw values are in Lakhs even
+though they are stored without `unit`/`unitScale` metadata (TCS consolidated
+quarters are the known example: revenue `7318800` means ₹73,188 Cr). The UI
+does **not** silently rescale these. `dashboard/lib/analysis.ts` flags a result
+when:
+
+- revenue jumps by more than 10× or less than 0.1× versus the previous quarter
+  or the year-ago quarter within the same reporting basis,
+- quarterly revenue is more than 2× the full-year revenue,
+- annual revenue jumps by more than 10× between adjacent years,
+- consolidated and standalone revenue differ by more than 10× for the same
+  quarter, or
+- revenue is more than 5× the market cap.
+
+When flagged, the report card keeps the reported values but withholds growth,
+margins-vs-prior-period, ranks, streaks, own-trend comparisons, TTM and CAGR,
+and caps the score at 20 with the verdict **Data check needed**. Fix the units
+at the source; do not auto-correct them in the client.
+
+## Earnings report card
+
+`dashboard/lib/analysis.ts` builds a deterministic read of the latest result
+that always renders, even when the AI Take is queued or unavailable.
+
+- The API has no analyst estimates, so there is no "beat/miss". Everything is
+  labelled **vs its own trend**: previous quarter, same quarter last year,
+  trailing twelve months, the previous four quarters, and 3Y/5Y CAGR.
+- It produces QoQ/YoY growth, operating/net margins, effective tax rate,
+  other-income gap, TTM totals, ranks within the last 8 quarters, positive YoY
+  streaks, quality flags, drivers/watchouts and a 0–100 score.
+- Trend math stays on the latest quarter's basis. In `preferred` mode the API
+  can return consolidated for one period and standalone for another; comparing
+  those would fake a jump, so the report card only compares consolidated with
+  consolidated (or standalone with standalone) and falls back to **Limited
+  history** when the same-basis history is short.
+- The score needs at least two comparison signals. With less history it returns
+  **Limited history** and no score, so a single quarter cannot look like an
+  improving trend.
+- `EarningsReportCard` renders the score ring, verdict, metric tiles, the
+  "What changed" / "What to watch" lists, the vs-own-record strip, the original
+  NSE filing link, and a "Copy result brief" button (`buildResultBrief`).
+
+## Watchlist
+
+The watchlist is per-device and client-only; there is no account sync.
+
+- Storage key: `stockjump:watchlist` (`localStorage`, array of symbols).
+- Change event: `stockjump:watchlist-change` (same-tab and cross-tab updates).
+- `dashboard/lib/watchlist.ts` exposes the hook used by the dashboard and stock
+  detail pages. Watchlisted symbols appear under the dashboard **Watchlist**
+  tab and are marked with a star in the table.
+
 ## Important UI rules
 
 1. `year` is the financial-year label, not the calendar year. Q2 ending Sep
@@ -118,8 +172,10 @@ legacy-unit warning.
 3. Growth is computed from normalized Crores values. `strong-movers` can return
    extreme growth when the previous value is near zero; `formatGrowth` clamps
    the display at 9,999.9%+.
-4. In `preferred` mode, `recent` returns one row per symbol + year + quarter.
-   With `all`, the same symbol can appear twice (standalone + consolidated).
+4. In `preferred` mode, `recent` is expected to return one row per symbol + year +
+   quarter. The deployed API sometimes returns both bases anyway, so
+   `fetchRecentQuarterly` also dedupes by symbol + period client-side. With
+   `all`, the same symbol can appear twice (standalone + consolidated).
 5. `pe`, `pb`, `marketCap`, `currentPrice` and `promoterHolding` are frequently
    `null` for recent filings.
 6. The recent feed defaults to the last day; pass `days=90` (or `from`/`to`) to
